@@ -88,3 +88,4 @@ vercel --prod
 ## Licencia
 
 Sistema controlado mediante el campo `licenseStatus` en `settings/main` de Firestore. Valores: `active` o `suspended`.
+# europamodels
