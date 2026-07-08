@@ -1,0 +1,44 @@
+{
+  "empresa": {
+    "nombre": "Europa Models",
+    "descripcion": "Catálogo exclusivo de perfumes, ropa, relojes y accesorios.",
+    "telefono": "",
+    "correo": "",
+    "direccion": "",
+    "sitioWeb": "",
+    "redesSociales": {
+      "instagram": "",
+      "facebook": "",
+      "whatsapp": ""
+    }
+  },
+  "catalogo": {
+    "mostrarPrecio": true,
+    "mostrarStock": false,
+    "mostrarMarca": true,
+    "mostrarCategoria": true,
+    "productosPorPagina": 24,
+    "ordenDefault": "recientes"
+  },
+  "cotizaciones": {
+    "prefijo": "COT",
+    "longitudNumeros": 6,
+    "mensajeAutomatico": "Hola, le comparto la cotización solicitada de Europa Models.",
+    "observacionesAutomaticas": "Cotización sujeta a disponibilidad.",
+    "validezDias": 7
+  },
+  "apariencia": {
+    "colorPrincipal": "#2563eb",
+    "colorSecundario": "#ffffff",
+    "modoOscuro": false
+  },
+  "inicio": {
+    "tituloPrincipal": "Descubre nuestro catálogo exclusivo",
+    "subtitulo": "Perfumes, ropa, relojes y accesorios seleccionados para ti.",
+    "textoBoton": "Ver catálogo",
+    "videoInicio": "",
+    "imagenRespaldo": ""
+  },
+  "licenseStatus": "active",
+  "version": "1.0.0"
+}

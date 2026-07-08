@@ -1,0 +1,16 @@
+{
+  "nombre": "Administrador",
+  "correo": "admin@europamodels.com",
+  "rol": "administrador",
+  "activo": true,
+  "cargo": "Administrador",
+  "fechaCreacion": "2026-07-08T00:00:00.000Z",
+  "permisos": {
+    "productos": { "crear": true, "editar": true, "eliminar": true, "ocultar": true, "cambiarPrecios": true, "cambiarStock": true, "subirImagenes": true },
+    "categorias": { "crear": true, "editar": true, "eliminar": true, "cambiarOrden": true },
+    "marcas": { "crear": true, "editar": true, "eliminar": true },
+    "cotizaciones": { "crear": true, "verPropias": true, "verTodas": true, "eliminar": true, "cambiarEstado": true },
+    "usuarios": { "invitar": true, "editarPermisos": true, "desactivar": true, "eliminar": true },
+    "configuracion": { "editar": true }
+  }
+}
