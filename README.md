@@ -51,14 +51,40 @@ npm run icons
 npm run dev
 ```
 
-## Desplegar en Vercel
+## Datos iniciales (seed)
+
+Opcional: para crear configuración, categorías y marcas de ejemplo:
+
+1. Descarga la clave de servicio de Firebase (`serviceAccountKey.json`) y colócala en la raíz del proyecto.
+2. Ejecuta:
 
 ```bash
-npm run build
-# Sube el proyecto a GitHub y conecta el repositorio en Vercel.
-# Configura las variables de entorno en el dashboard de Vercel.
+node scripts/seed.js
+```
+
+## Seguridad en Firestore
+
+Sube las reglas de seguridad incluidas en `firestore.rules` a Firebase Console > Firestore Database > Reglas.
+
+## Desplegar en Vercel
+
+1. Crea un repositorio en GitHub y sube el código:
+
+```bash
+git remote add origin https://github.com/TU_USUARIO/europa-models.git
+git push -u origin main
+```
+
+2. En Vercel, conecta el repositorio y configura las variables de entorno (mismas de `.env.local`).
+3. Vercel ejecutará `npm install && npm run icons && npm run build` automáticamente.
+
+O despliega manualmente con Vercel CLI:
+
+```bash
+vercel login
+vercel --prod
 ```
 
 ## Licencia
 
-Sistema controlado mediante el campo `licenseStatus` en `settings/main` de Firestore.
+Sistema controlado mediante el campo `licenseStatus` en `settings/main` de Firestore. Valores: `active` o `suspended`.
