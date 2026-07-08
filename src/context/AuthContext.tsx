@@ -4,6 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
   signOut,
   createUserWithEmailAndPassword,
   updateProfile,
@@ -24,6 +26,7 @@ interface AuthContextValue {
   firebaseUser: FirebaseUser | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   completeInvitation: (
     email: string,
@@ -112,6 +115,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser({ ...data, id: result.user.uid });
   };
 
+  const loginWithGoogle = async () => {
+    const auth = getFirebaseAuth();
+    const firestore = getFirebaseDb();
+    if (!auth || !firestore) throw new Error("Firebase no está configurado");
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(auth, provider);
+    const userDoc = await getDoc(doc(firestore, "users", result.user.uid));
+    if (!userDoc.exists()) {
+      // Usuario nuevo con Google: crear documento con permisos básicos de vendedor
+      const newUser: Omit<AppUser, "id"> = {
+        nombre:
+          result.user.displayName ||
+          result.user.email?.split("@")[0] ||
+          "Usuario",
+        correo: result.user.email || "",
+        rol: "vendedor",
+        activo: true,
+        cargo: "Vendedor",
+        fechaCreacion: new Date().toISOString(),
+        permisos: defaultPermissions,
+      };
+      await setDoc(doc(firestore, "users", result.user.uid), newUser);
+      setUser({ ...newUser, id: result.user.uid });
+    } else {
+      const data = userDoc.data() as Omit<AppUser, "id">;
+      if (!data.activo) throw new Error("Cuenta suspendida");
+      setUser({ ...data, id: result.user.uid });
+    }
+  };
+
   const logout = async () => {
     const auth = getFirebaseAuth();
     if (auth) await signOut(auth);
@@ -161,6 +194,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         firebaseUser,
         loading,
         login,
+        loginWithGoogle,
         logout,
         completeInvitation,
         hasPermission,
