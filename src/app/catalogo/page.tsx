@@ -20,18 +20,25 @@ import toast from "react-hot-toast";
 
 export default function CatalogoPage() {
   const router = useRouter();
-  const { products, categories, subcategories, brands, loading } = useCatalogData();
+  const { products, categories, subcategories, brands, loading } =
+    useCatalogData();
   const { addToCart } = useCart();
   const { settings } = useSettings();
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("todos");
+  const [selectedSubcategory, setSelectedSubcategory] =
+    useState<string>("todos");
   const [selectedBrand, setSelectedBrand] = useState<string>("todos");
-  const [selectedProduct, setSelectedProduct] = useState<ProductWithRelations | null>(null);
+  const [selectedGender, setSelectedGender] = useState<string>("todos");
+  const [selectedProduct, setSelectedProduct] =
+    useState<ProductWithRelations | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   const [quoteFormOpen, setQuoteFormOpen] = useState(false);
-  const [quoteCreated, setQuoteCreated] = useState<{ codigo: string; id: string } | null>(null);
+  const [quoteCreated, setQuoteCreated] = useState<{
+    codigo: string;
+    id: string;
+  } | null>(null);
 
   const filteredProducts = useMemo(() => {
     const term = normalizeText(search);
@@ -50,16 +57,35 @@ export default function CatalogoPage() {
       const matchesCategory =
         selectedCategory === "todos" || p.categoriaId === selectedCategory;
       const matchesSubcategory =
-        selectedSubcategory === "todos" || p.subcategoriaId === selectedSubcategory;
-      const matchesBrand = selectedBrand === "todos" || p.marcaId === selectedBrand;
+        selectedSubcategory === "todos" ||
+        p.subcategoriaId === selectedSubcategory;
+      const matchesBrand =
+        selectedBrand === "todos" || p.marcaId === selectedBrand;
+      const matchesGender =
+        selectedGender === "todos" || p.genero === selectedGender;
 
-      return matchesSearch && matchesCategory && matchesSubcategory && matchesBrand;
+      return (
+        matchesSearch &&
+        matchesCategory &&
+        matchesSubcategory &&
+        matchesBrand &&
+        matchesGender
+      );
     });
-  }, [products, search, selectedCategory, selectedSubcategory, selectedBrand]);
+  }, [
+    products,
+    search,
+    selectedCategory,
+    selectedSubcategory,
+    selectedBrand,
+    selectedGender,
+  ]);
 
   const availableSubcategories = useMemo(() => {
     if (selectedCategory === "todos") return [];
-    return subcategories.filter((s) => s.categoriaId === selectedCategory && s.activo);
+    return subcategories.filter(
+      (s) => s.categoriaId === selectedCategory && s.activo,
+    );
   }, [subcategories, selectedCategory]);
 
   const handleAdd = (product: ProductWithRelations) => {
@@ -168,22 +194,37 @@ export default function CatalogoPage() {
         </div>
 
         <main className="flex-1 px-4 py-6 lg:px-8">
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm text-muted-foreground">
-              {filteredProducts.length} producto{filteredProducts.length !== 1 ? "s" : ""}
+              {filteredProducts.length} producto
+              {filteredProducts.length !== 1 ? "s" : ""} encontrado
+              {filteredProducts.length !== 1 ? "s" : ""}
             </p>
-            <select
-              value={selectedBrand}
-              onChange={(e) => setSelectedBrand(e.target.value)}
-              className="rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary"
-            >
-              <option value="todos">Todas las marcas</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.nombre}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                value={selectedBrand}
+                onChange={(e) => setSelectedBrand(e.target.value)}
+                className="rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary"
+              >
+                <option value="todos">Todas las marcas</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.nombre}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedGender}
+                onChange={(e) => setSelectedGender(e.target.value)}
+                className="rounded-xl border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary"
+              >
+                <option value="todos">Todo género</option>
+                <option value="hombre">Hombre</option>
+                <option value="mujer">Mujer</option>
+                <option value="unisex">Unisex</option>
+                <option value="ninos">Niños</option>
+              </select>
+            </div>
           </div>
 
           {loading ? (
@@ -194,8 +235,12 @@ export default function CatalogoPage() {
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-lg font-medium text-foreground">No se encontraron productos</p>
-              <p className="text-sm text-muted-foreground">Prueba con otros términos o filtros.</p>
+              <p className="text-lg font-medium text-foreground">
+                No se encontraron productos
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Prueba con otros términos o filtros.
+              </p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
@@ -211,12 +256,21 @@ export default function CatalogoPage() {
           )}
         </main>
 
-        <ProductDrawer product={selectedProduct} onClose={() => setSelectedProduct(null)} />
-        <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} onCreateQuote={() => setQuoteFormOpen(true)} />
+        <ProductDrawer
+          product={selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+        />
+        <CartDrawer
+          open={cartOpen}
+          onClose={() => setCartOpen(false)}
+          onCreateQuote={() => setQuoteFormOpen(true)}
+        />
         <QuoteForm
           open={quoteFormOpen}
           onClose={() => setQuoteFormOpen(false)}
-          onQuoteCreated={(q) => handleQuoteCreated({ codigo: q.codigo, id: q.id })}
+          onQuoteCreated={(q) =>
+            handleQuoteCreated({ codigo: q.codigo, id: q.id })
+          }
         />
       </div>
     </LicenseGuard>

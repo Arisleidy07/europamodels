@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, User } from "lucide-react";
+import { ArrowRight, User, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
+import { Logo } from "@/components/Logo";
 import { LicenseGuard } from "@/components/LicenseGuard";
 
-const VIDEOS = [
+const DEFAULT_VIDEOS = [
   "/videos/perfume1.mov",
   "/videos/perfume2.mov",
   "/videos/perfume3.mov",
@@ -16,7 +17,14 @@ const VIDEOS = [
 
 export default function HomePage() {
   const { settings } = useSettings();
-  const { user } = useAuth();
+  const { user, hasPermission } = useAuth();
+  const VIDEOS = settings.inicio.videoInicio
+    ? [settings.inicio.videoInicio]
+    : DEFAULT_VIDEOS;
+  const isAdmin =
+    user?.rol === "administrador" ||
+    hasPermission("productos", "crear") ||
+    hasPermission("categorias", "crear");
   const [current, setCurrent] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -54,14 +62,25 @@ export default function HomePage() {
         </div>
 
         {/* Top bar */}
-        <div className="absolute right-4 top-4 z-20 sm:right-8 sm:top-6">
-          <Link
-            href={user ? "/administracion" : "/login"}
-            className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
-          >
-            <User className="h-4 w-4" />
-            {user ? user.nombre : "Iniciar sesión"}
-          </Link>
+        <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 py-5 sm:px-10">
+          <Logo variant="horizontal" height={38} className="drop-shadow-lg" />
+          <div className="flex items-center gap-3">
+            {isAdmin && (
+              <Link
+                href="/administracion"
+                className="hidden items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20 sm:flex"
+              >
+                <LayoutDashboard className="h-4 w-4" /> Admin
+              </Link>
+            )}
+            <Link
+              href={user ? "/perfil" : "/login"}
+              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
+            >
+              <User className="h-4 w-4" />
+              {user ? user.nombre : "Iniciar sesión"}
+            </Link>
+          </div>
         </div>
 
         {/* Content */}
@@ -71,23 +90,11 @@ export default function HomePage() {
           transition={{ duration: 0.6 }}
           className="relative z-10 flex flex-col items-center px-6 text-center"
         >
-          {settings.empresa.logo ? (
-            <img
-              src={settings.empresa.logo}
-              alt={settings.empresa.nombre}
-              className="h-24 w-auto object-contain drop-shadow-2xl sm:h-32"
-            />
-          ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white text-3xl font-bold text-black shadow-2xl sm:h-32 sm:w-32 sm:text-4xl">
-              EM
-            </div>
-          )}
-
-          <h1 className="mt-8 text-4xl font-bold tracking-tight sm:text-6xl">
-            {settings.empresa.nombre}
-          </h1>
-          <p className="mt-4 max-w-xl text-lg font-light leading-relaxed text-white/90 sm:text-xl">
+          <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
             {settings.inicio.tituloPrincipal || settings.empresa.descripcion}
+          </h1>
+          <p className="mt-5 max-w-xl text-lg font-light leading-relaxed text-white/90 sm:text-xl">
+            {settings.inicio.subtitulo || "Descubre nuestro catálogo exclusivo"}
           </p>
 
           <motion.div

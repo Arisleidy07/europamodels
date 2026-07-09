@@ -15,8 +15,14 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permisos[path] == true;
     }
 
+    function isSuperAdmin() {
+      return isActiveUser() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperAdmin == true;
+    }
+
     function canManageUsers() {
       return isActiveUser() && (
+        isSuperAdmin() ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'administrador' ||
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permisos.usuarios.invitar == true
       );
@@ -24,8 +30,15 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isActiveUser() && (canManageUsers() || request.auth.uid == userId);
-      allow update: if isActiveUser() && (request.auth.uid == userId || canManageUsers());
-      allow create, delete: if canManageUsers();
+
+      // Super admin no puede ser modificado ni eliminado por otros
+      allow update: if isActiveUser() && (
+        (request.auth.uid == userId && !resource.data.isSuperAdmin) ||
+        isSuperAdmin() ||
+        (!resource.data.isSuperAdmin && canManageUsers())
+      );
+      allow create: if canManageUsers();
+      allow delete: if isActiveUser() && !resource.data.isSuperAdmin && (isSuperAdmin() || canManageUsers());
     }
 
     match /products/{productId} {

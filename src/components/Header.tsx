@@ -2,12 +2,19 @@
 
 import React from "react";
 import Link from "next/link";
-import { ShoppingCart, User, Menu, Wifi, WifiOff } from "lucide-react";
+import {
+  ShoppingCart,
+  User,
+  Menu,
+  Wifi,
+  WifiOff,
+  LayoutDashboard,
+} from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
+import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useSettings } from "@/context/SettingsContext";
 import { cn, getInitials } from "@/lib/utils";
 
 interface HeaderProps {
@@ -18,15 +25,27 @@ interface HeaderProps {
   showMenu?: boolean;
 }
 
-export function Header({ search = "", onSearchChange, onOpenCart, onOpenMenu, showMenu = true }: HeaderProps) {
-  const { user } = useAuth();
+export function Header({
+  search = "",
+  onSearchChange,
+  onOpenCart,
+  onOpenMenu,
+  showMenu = true,
+}: HeaderProps) {
+  const { user, hasPermission } = useAuth();
   const { totalItems } = useCart();
   const online = useOnlineStatus();
-  const { settings } = useSettings();
+
+  const isAdmin =
+    user?.rol === "administrador" ||
+    hasPermission("productos", "crear") ||
+    hasPermission("categorias", "crear") ||
+    hasPermission("marcas", "crear") ||
+    hasPermission("configuracion", "editar");
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/90 backdrop-blur-md">
-      <div className="flex h-[72px] items-center gap-4 px-4 lg:px-8">
+      <div className="flex h-[72px] items-center gap-3 px-4 lg:px-8">
         {showMenu && (
           <button
             onClick={onOpenMenu}
@@ -37,17 +56,8 @@ export function Header({ search = "", onSearchChange, onOpenCart, onOpenMenu, sh
           </button>
         )}
 
-        <Link href="/catalogo" className="flex items-center gap-2 shrink-0">
-          {settings.empresa.logo ? (
-            <img src={settings.empresa.logo} alt="Logo" className="h-9 w-auto object-contain" />
-          ) : (
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary font-bold text-white">
-              EM
-            </div>
-          )}
-          <span className="hidden text-lg font-semibold tracking-tight text-foreground sm:block">
-            {settings.empresa.nombre}
-          </span>
+        <Link href="/catalogo" className="flex shrink-0 items-center">
+          <Logo variant="horizontal" height={32} />
         </Link>
 
         {onSearchChange && (
@@ -58,7 +68,11 @@ export function Header({ search = "", onSearchChange, onOpenCart, onOpenMenu, sh
 
         <div className="ml-auto flex items-center gap-2 sm:gap-4">
           <div className="hidden items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground sm:flex">
-            {online ? <Wifi className="h-3.5 w-3.5 text-success" /> : <WifiOff className="h-3.5 w-3.5 text-warning" />}
+            {online ? (
+              <Wifi className="h-3.5 w-3.5 text-success" />
+            ) : (
+              <WifiOff className="h-3.5 w-3.5 text-warning" />
+            )}
             {online ? "Sincronizado" : "Sin conexión"}
           </div>
 
@@ -75,14 +89,30 @@ export function Header({ search = "", onSearchChange, onOpenCart, onOpenMenu, sh
             )}
           </button>
 
+          {isAdmin && (
+            <Link
+              href="/administracion"
+              className="hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 sm:flex"
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
+
           <Link
-            href={user ? "/administracion" : "/login"}
+            href={user ? "/perfil" : "/login"}
             className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full bg-muted text-foreground transition-colors hover:bg-gray-200"
           >
             {user?.foto ? (
-              <img src={user.foto} alt={user.nombre} className="h-full w-full object-cover" />
+              <img
+                src={user.foto}
+                alt={user.nombre}
+                className="h-full w-full object-cover"
+              />
             ) : (
-              <span className="text-xs font-semibold">{user ? getInitials(user.nombre) : <User className="h-5 w-5" />}</span>
+              <span className="text-xs font-semibold">
+                {user ? getInitials(user.nombre) : <User className="h-5 w-5" />}
+              </span>
             )}
           </Link>
         </div>

@@ -19,8 +19,9 @@ const db = getFirestore();
 
 async function seed() {
   const settingsRef = db.collection("settings").doc("main");
-  await settingsRef.set(
-    {
+  const settingsSnap = await settingsRef.get();
+  if (!settingsSnap.exists) {
+    await settingsRef.set({
       empresa: {
         nombre: "Europa Models",
         descripcion:
@@ -62,10 +63,11 @@ async function seed() {
       },
       licenseStatus: "active",
       version: "1.0.0",
-    },
-    { merge: true },
-  );
-  console.log("Configuración inicial creada/actualizada.");
+    });
+    console.log("Configuración inicial creada.");
+  } else {
+    console.log("Configuración existente preservada.");
+  }
 
   const categories = [
     "Perfumes",
@@ -152,21 +154,28 @@ async function seed() {
       configuracion: { editar: true },
     };
 
+    const isSuperAdmin =
+      (user.email || "").toLowerCase() === "admin@europamodels.com";
+
     if (!snap.exists) {
       await userRef.set({
         nombre:
           user.displayName || user.email?.split("@")[0] || "Administrador",
         correo: user.email || "",
         rol: "administrador",
+        isSuperAdmin,
         activo: true,
-        cargo: "Administrador",
+        cargo: isSuperAdmin ? "Super Administradora" : "Administrador",
         fechaCreacion: user.metadata.creationTime || new Date().toISOString(),
         permisos: adminPermissions,
       });
-      console.log(`Usuario admin creado para ${user.email}`);
+      console.log(
+        `Usuario ${isSuperAdmin ? "Super Admin" : "admin"} creado para ${user.email}`,
+      );
     } else {
       await userRef.update({
         rol: "administrador",
+        isSuperAdmin,
         activo: true,
         permisos: adminPermissions,
       });

@@ -1,12 +1,17 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { X, Upload, GripVertical, Trash2 } from "lucide-react";
+import React, { useState, useRef, useMemo } from "react";
+import { X, Upload, Trash2, Star, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { createProduct, updateProduct, uploadProductImages } from "@/lib/products";
+import {
+  createProduct,
+  updateProduct,
+  uploadProductImages,
+} from "@/lib/products";
 import { useAuth } from "@/context/AuthContext";
 import { generateId } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { Product, Category, Subcategory, Brand } from "@/types";
 
@@ -19,92 +24,172 @@ interface ProductFormProps {
   onSaved: () => void;
 }
 
+interface ImageItem {
+  id: string;
+  type: "url" | "file";
+  url: string;
+  file?: File;
+}
+
 const initialProduct: Partial<Product> = {
   nombre: "",
   descripcion: "",
-  codigoInterno: "",
-  sku: "",
   marcaId: "",
   categoriaId: "",
   subcategoriaId: "",
   genero: "unisex",
   precio: 0,
+  precioOferta: undefined,
   stock: 0,
   imagenes: [],
   estado: "publicado",
   etiquetas: [],
   visible: true,
+  oferta: false,
+  nuevo: false,
 };
 
-export function ProductForm({ product, categories, subcategories, brands, onClose, onSaved }: ProductFormProps) {
+export function ProductForm({
+  product,
+  categories,
+  subcategories,
+  brands,
+  onClose,
+  onSaved,
+}: ProductFormProps) {
   const { user } = useAuth();
-  const [form, setForm] = useState<Partial<Product>>(product ? { ...product } : initialProduct);
-  const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>(product?.imagenes || []);
+  const [form, setForm] = useState<Partial<Product>>(
+    product ? { ...product, ...initialProduct } : initialProduct,
+  );
+
+  const initialImages = useMemo<ImageItem[]>(() => {
+    return (product?.imagenes || []).map((url, i) => ({
+      id: `existing-${i}`,
+      type: "url" as const,
+      url,
+    }));
+  }, [product?.imagenes]);
+
+  const [images, setImages] = useState<ImageItem[]>(initialImages);
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [dragging, setDragging] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const filteredSubcategories = subcategories.filter(
-    (s) => s.categoriaId === form.categoriaId && s.activo
+    (s) => s.categoriaId === form.categoriaId && s.activo,
   );
 
   const handleFiles = (selected: FileList | null) => {
     if (!selected) return;
-    const newFiles = Array.from(selected);
-    setFiles((prev) => [...prev, ...newFiles]);
-    const newPreviews = newFiles.map((f) => URL.createObjectURL(f));
-    setPreviews((prev) => [...prev, ...newPreviews]);
+    const newFiles = Array.from(selected).filter((f) =>
+      f.type.startsWith("image/"),
+    );
+    if (newFiles.length === 0) return;
+    const newItems: ImageItem[] = newFiles.map((file) => ({
+      id: `new-${generateId()}`,
+      type: "file",
+      url: URL.createObjectURL(file),
+      file,
+    }));
+    setImages((prev) => [...prev, ...newItems]);
   };
 
-  const removeImage = (index: number) => {
-    setPreviews((prev) => prev.filter((_, i) => i !== index));
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeImage = (id: string) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   const moveImage = (from: number, to: number) => {
-    const arr = [...previews];
+    if (to < 0 || to >= images.length) return;
+    const arr = [...images];
     const [removed] = arr.splice(from, 1);
     arr.splice(to, 0, removed);
-    setPreviews(arr);
-    const filesArr = [...files];
-    const [removedFile] = filesArr.splice(from, 1);
-    filesArr.splice(to, 0, removedFile);
-    setFiles(filesArr);
+    setImages(arr);
+  };
+
+  const setMainImage = (index: number) => {
+    if (index === 0) return;
+    const arr = [...images];
+    const [selected] = arr.splice(index, 1);
+    arr.unshift(selected);
+    setImages(arr);
+  };
+
+  const handleDragStart = (id: string) => setDragging(id);
+  const handleDragOver = (e: React.DragEvent, id: string) => {
+    e.preventDefault();
+    if (dragging === id) return;
+    const from = images.findIndex((i) => i.id === dragging);
+    const to = images.findIndex((i) => i.id === id);
+    if (from >= 0 && to >= 0) moveImage(from, to);
   };
 
   const addTag = () => {
-    const t = tagInput.trim();
+    const t = tagInput.trim().toLowerCase();
     if (!t) return;
-    setForm((prev) => ({ ...prev, etiquetas: [...(prev.etiquetas || []), t] }));
+    setForm((prev) => ({
+      ...prev,
+      etiquetas: [...(prev.etiquetas || []).filter((x) => x !== t), t],
+    }));
     setTagInput("");
   };
 
   const removeTag = (tag: string) => {
-    setForm((prev) => ({ ...prev, etiquetas: (prev.etiquetas || []).filter((x) => x !== tag) }));
+    setForm((prev) => ({
+      ...prev,
+      etiquetas: (prev.etiquetas || []).filter((x) => x !== tag),
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.nombre || !form.categoriaId || !form.marcaId || form.precio === undefined) {
+    if (
+      !form.nombre ||
+      !form.categoriaId ||
+      !form.marcaId ||
+      form.precio === undefined
+    ) {
       toast.error("Completa los campos requeridos");
       return;
     }
 
     setLoading(true);
     try {
-      let imageUrls = previews.filter((p) => p.startsWith("http"));
-
-      const tempId = product?.id || generateId();
-      if (files.length > 0) {
-        const uploaded = await uploadProductImages(tempId, files);
-        imageUrls = [...imageUrls, ...uploaded];
+      const existingUrls = images
+        .filter((i) => i.type === "url")
+        .map((i) => i.url);
+      const fileItems = images.filter((i) => i.type === "file");
+      let uploadedUrls: string[] = [];
+      if (fileItems.length > 0) {
+        const tempId = product?.id || generateId();
+        uploadedUrls = await uploadProductImages(
+          tempId,
+          fileItems.map((i) => i.file!),
+        );
       }
+
+      const orderedUrls: string[] = [];
+      let fileIdx = 0;
+      images.forEach((img) => {
+        if (img.type === "url") orderedUrls.push(img.url);
+        else if (img.type === "file" && uploadedUrls[fileIdx]) {
+          orderedUrls.push(uploadedUrls[fileIdx]);
+          fileIdx++;
+        }
+      });
 
       const payload = {
         ...form,
-        imagenes: imageUrls,
+        imagenes: orderedUrls,
+        oferta:
+          !!form.precioOferta &&
+          form.precioOferta > 0 &&
+          form.precioOferta < form.precio,
         precio: Number(form.precio),
+        precioOferta:
+          form.precioOferta && form.precioOferta > 0
+            ? Number(form.precioOferta)
+            : undefined,
         stock: Number(form.stock || 0),
         visible: form.estado === "publicado" || form.estado === "agotado",
         fechaActualizacion: new Date().toISOString(),
@@ -131,14 +216,19 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-6 py-4">
-        <h2 className="text-lg font-semibold">{product ? "Editar producto" : "Nuevo producto"}</h2>
-        <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-muted">
+        <h2 className="text-lg font-semibold">
+          {product ? "Editar producto" : "Nuevo producto"}
+        </h2>
+        <button
+          onClick={onClose}
+          className="rounded-full p-2 transition-colors hover:bg-muted"
+        >
           <X className="h-5 w-5" />
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
-        <div className="space-y-6">
+        <div className="space-y-8">
           <section>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
               Información principal
@@ -150,23 +240,15 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 onChange={(e) => setForm({ ...form, nombre: e.target.value })}
                 required
               />
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Código interno"
-                  value={form.codigoInterno || ""}
-                  onChange={(e) => setForm({ ...form, codigoInterno: e.target.value })}
-                />
-                <Input
-                  label="SKU"
-                  value={form.sku || ""}
-                  onChange={(e) => setForm({ ...form, sku: e.target.value })}
-                />
-              </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Descripción</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Descripción
+                </label>
                 <textarea
                   value={form.descripcion || ""}
-                  onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, descripcion: e.target.value })
+                  }
                   rows={3}
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                 />
@@ -180,10 +262,14 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
             </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Marca *</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Marca *
+                </label>
                 <select
                   value={form.marcaId}
-                  onChange={(e) => setForm({ ...form, marcaId: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, marcaId: e.target.value })
+                  }
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary"
                   required
                 >
@@ -196,11 +282,17 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Categoría *</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Categoría *
+                </label>
                 <select
                   value={form.categoriaId}
                   onChange={(e) => {
-                    setForm({ ...form, categoriaId: e.target.value, subcategoriaId: "" });
+                    setForm({
+                      ...form,
+                      categoriaId: e.target.value,
+                      subcategoriaId: "",
+                    });
                   }}
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary"
                   required
@@ -214,10 +306,14 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Subcategoría</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Subcategoría
+                </label>
                 <select
                   value={form.subcategoriaId || ""}
-                  onChange={(e) => setForm({ ...form, subcategoriaId: e.target.value })}
+                  onChange={(e) =>
+                    setForm({ ...form, subcategoriaId: e.target.value })
+                  }
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary"
                 >
                   <option value="">Seleccionar subcategoría</option>
@@ -229,10 +325,14 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Género</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Género
+                </label>
                 <select
                   value={form.genero}
-                  onChange={(e) => setForm({ ...form, genero: e.target.value as any })}
+                  onChange={(e) =>
+                    setForm({ ...form, genero: e.target.value as any })
+                  }
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary"
                 >
                   <option value="unisex">Unisex</option>
@@ -245,7 +345,9 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
           </section>
 
           <section>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Precio e inventario</h3>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Precio e inventario
+            </h3>
             <div className="grid gap-4 sm:grid-cols-3">
               <Input
                 label="Precio *"
@@ -253,7 +355,9 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 min={0}
                 step="0.01"
                 value={form.precio}
-                onChange={(e) => setForm({ ...form, precio: parseFloat(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setForm({ ...form, precio: parseFloat(e.target.value) || 0 })
+                }
                 required
               />
               <Input
@@ -262,27 +366,45 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 min={0}
                 step="0.01"
                 value={form.precioOferta || ""}
-                onChange={(e) => setForm({ ...form, precioOferta: parseFloat(e.target.value) || undefined })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    precioOferta: parseFloat(e.target.value) || undefined,
+                  })
+                }
               />
               <Input
                 label="Stock"
                 type="number"
                 min={0}
                 value={form.stock}
-                onChange={(e) => setForm({ ...form, stock: parseInt(e.target.value) || 0 })}
+                onChange={(e) =>
+                  setForm({ ...form, stock: parseInt(e.target.value) || 0 })
+                }
               />
             </div>
           </section>
 
           <section>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Imágenes</h3>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Imágenes
+            </h3>
             <div
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleFiles(e.dataTransfer.files);
+              }}
               onClick={() => fileRef.current?.click()}
               className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/30 p-8 transition-colors hover:bg-muted/50"
             >
               <Upload className="h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium text-foreground">Haz clic o arrastra imágenes aquí</p>
-              <p className="text-xs text-muted-foreground">La primera imagen será la portada</p>
+              <p className="mt-2 text-sm font-medium text-foreground">
+                Haz clic o arrastra imágenes aquí
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Arrastra para ordenar, selecciona ★ para portada
+              </p>
               <input
                 ref={fileRef}
                 type="file"
@@ -293,54 +415,88 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
               />
             </div>
 
-            {previews.length > 0 && (
-              <div className="mt-4 space-y-2">
-                {previews.map((preview, idx) => (
-                  <div key={idx} className="flex items-center gap-3 rounded-xl border border-border p-2">
-                    <GripVertical className="h-4 w-4 text-muted-foreground" />
-                    <img src={preview} alt="" className="h-14 w-14 rounded-lg object-cover" />
-                    <span className="text-sm text-muted-foreground">Imagen {idx + 1}</span>
-                    <div className="ml-auto flex gap-1">
-                      {idx > 0 && (
+            {images.length > 0 && (
+              <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                {images.map((img, idx) => {
+                  const isMain = idx === 0;
+                  return (
+                    <div
+                      key={img.id}
+                      draggable
+                      onDragStart={() => handleDragStart(img.id)}
+                      onDragOver={(e) => handleDragOver(e, img.id)}
+                      onDragEnd={() => setDragging(null)}
+                      className={cn(
+                        "group relative aspect-square cursor-move overflow-hidden rounded-xl border-2 bg-gray-50 transition-all",
+                        isMain ? "border-primary" : "border-border",
+                      )}
+                    >
+                      <img
+                        src={img.url}
+                        alt=""
+                        className="h-full w-full object-contain p-2"
+                      />
+                      {isMain && (
+                        <div className="absolute left-2 top-2 rounded-full bg-primary p-1 text-white">
+                          <Star className="h-3.5 w-3.5 fill-current" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                        {!isMain && (
+                          <button
+                            type="button"
+                            onClick={() => setMainImage(idx)}
+                            className="rounded-full bg-white p-2 text-primary shadow-sm"
+                            title="Convertir en portada"
+                          >
+                            <Star className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => moveImage(idx, idx - 1)}
-                          className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                          disabled={idx === 0}
+                          className="rounded-full bg-white p-2 text-foreground shadow-sm disabled:opacity-40"
                         >
-                          ↑
+                          <ArrowUp className="h-4 w-4" />
                         </button>
-                      )}
-                      {idx < previews.length - 1 && (
                         <button
                           type="button"
                           onClick={() => moveImage(idx, idx + 1)}
-                          className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                          disabled={idx === images.length - 1}
+                          className="rounded-full bg-white p-2 text-foreground shadow-sm disabled:opacity-40"
                         >
-                          ↓
+                          <ArrowDown className="h-4 w-4" />
                         </button>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(idx)}
-                        className="rounded-lg p-2 text-danger hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => removeImage(img.id)}
+                          className="rounded-full bg-white p-2 text-danger shadow-sm"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </section>
 
           <section>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Estado y etiquetas</h3>
+            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              Estado y etiquetas
+            </h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Estado</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Estado
+                </label>
                 <select
                   value={form.estado}
-                  onChange={(e) => setForm({ ...form, estado: e.target.value as any })}
+                  onChange={(e) =>
+                    setForm({ ...form, estado: e.target.value as any })
+                  }
                   className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary"
                 >
                   <option value="publicado">Publicado</option>
@@ -350,12 +506,16 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 </select>
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-foreground">Etiquetas</label>
+                <label className="mb-1.5 block text-sm font-medium text-foreground">
+                  Etiquetas
+                </label>
                 <div className="flex gap-2">
                   <input
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && (e.preventDefault(), addTag())
+                    }
                     placeholder="Agregar etiqueta"
                     className="flex-1 rounded-xl border border-border bg-white px-4 py-2 text-base outline-none focus:border-primary"
                   />
@@ -369,9 +529,16 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(form.etiquetas || []).map((tag) => (
-                    <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
+                    >
                       {tag}
-                      <button type="button" onClick={() => removeTag(tag)} className="hover:text-danger">
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="hover:text-danger"
+                      >
                         <X className="h-3 w-3" />
                       </button>
                     </span>
@@ -384,7 +551,13 @@ export function ProductForm({ product, categories, subcategories, brands, onClos
       </form>
 
       <div className="border-t border-border p-6">
-        <Button type="submit" size="lg" className="w-full" onClick={handleSubmit} loading={loading}>
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          onClick={handleSubmit}
+          loading={loading}
+        >
           {product ? "Guardar cambios" : "Crear producto"}
         </Button>
       </div>

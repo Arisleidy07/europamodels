@@ -9,7 +9,6 @@ import {
   LayoutGrid,
   Tag,
   Users,
-  User,
   Settings,
   LogOut,
   Plus,
@@ -28,7 +27,6 @@ import AdminCategories from "@/components/admin/AdminCategories";
 import AdminBrands from "@/components/admin/AdminBrands";
 import AdminTeam from "@/components/admin/AdminTeam";
 import AdminSettings from "@/components/admin/AdminSettings";
-import AdminProfile from "@/components/admin/AdminProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { useSettings } from "@/context/SettingsContext";
@@ -81,7 +79,6 @@ export default function AdminPage() {
       icon: Settings,
       visible: hasPermission("configuracion", "editar"),
     },
-    { id: "perfil", label: "Mi perfil", icon: User, visible: true },
   ].filter((t) => t.visible);
 
   const [activeTab, setActiveTab] = useState(tabs[0]?.id || "productos");
@@ -145,6 +142,20 @@ export default function AdminPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background">
       <Header search="" showMenu={false} />
+
+      <div className="border-b border-border bg-white px-4 py-3 lg:hidden">
+        <select
+          value={activeTab}
+          onChange={(e) => setActiveTab(e.target.value)}
+          className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-primary"
+        >
+          {tabs.map((tab) => (
+            <option key={tab.id} value={tab.id}>
+              {tab.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar */}
@@ -358,8 +369,6 @@ export default function AdminPage() {
           {activeTab === "equipo" && <AdminTeam />}
 
           {activeTab === "configuracion" && <AdminSettings />}
-
-          {activeTab === "perfil" && <AdminProfile />}
         </main>
       </div>
 

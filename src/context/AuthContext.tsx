@@ -34,6 +34,7 @@ interface AuthContextValue {
     nombre: string,
   ) => Promise<void>;
   hasPermission: (scope: keyof UserPermissions, action: string) => boolean;
+  canManageUser: (target: AppUser) => boolean;
 }
 
 const defaultPermissions: Required<UserPermissions> = {
@@ -177,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     action: string,
   ): boolean => {
     if (!user) return false;
+    if (user.isSuperAdmin) return true;
     if (user.rol === "administrador") return true;
     const scopePerms = user.permisos?.[scope] || {};
     const defaultScope = defaultPermissions[scope] || {};
@@ -185,6 +187,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (defaultScope as Record<string, boolean>)[action] ??
       false
     );
+  };
+
+  const canManageUser = (target: AppUser): boolean => {
+    if (!user) return false;
+    if (user.isSuperAdmin) return true;
+    if (target.isSuperAdmin) return false;
+    if (target.id === user.id) return true;
+    return user.rol === "administrador";
   };
 
   return (
@@ -198,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         completeInvitation,
         hasPermission,
+        canManageUser,
       }}
     >
       {children}

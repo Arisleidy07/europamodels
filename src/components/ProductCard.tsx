@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Heart } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useSettings } from "@/context/SettingsContext";
@@ -18,50 +18,67 @@ interface ProductCardProps {
 export function ProductCard({ product, onClick, onAdd }: ProductCardProps) {
   const { settings } = useSettings();
   const imageUrl = product.imagenes[0] || "/placeholder-product.svg";
+  const categoryColor = product.categoria?.color || product.marca?.color;
 
   const statusBadge = () => {
-    if (product.estado === "agotado") return <Badge variant="danger">Agotado</Badge>;
-    if (product.stock <= 3 && product.stock > 0) return <Badge variant="warning">Pocas unidades</Badge>;
+    if (product.estado === "agotado")
+      return <Badge variant="danger">Agotado</Badge>;
+    if (product.stock <= 3 && product.stock > 0)
+      return <Badge variant="warning">Pocas unidades</Badge>;
     if (product.nuevo) return <Badge variant="info">Nuevo</Badge>;
     if (product.oferta) return <Badge variant="success">Oferta</Badge>;
     return null;
   };
 
+  const categoryStyle = categoryColor
+    ? {
+        borderColor: categoryColor,
+        color: categoryColor,
+        backgroundColor: `${categoryColor}10`,
+      }
+    : undefined;
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      whileHover={{ y: -4, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm transition-shadow duration-200 hover:shadow-md"
+      transition={{ duration: 0.25 }}
+      whileHover={{ y: -6 }}
+      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm transition-all duration-300 hover:shadow-lg"
       onClick={onClick}
     >
       <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-gray-50">
         <img
           src={imageUrl}
           alt={product.nombre}
-          className="h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110"
           loading="lazy"
         />
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
           {statusBadge()}
         </div>
+        {settings.catalogo.mostrarCategoria && product.categoria && (
+          <div className="absolute bottom-3 left-3">
+            <span
+              className="rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide"
+              style={categoryStyle}
+            >
+              {product.categoria.nombre}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="mt-3 flex flex-1 flex-col">
         {settings.catalogo.mostrarMarca && product.marca && (
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
             {product.marca.nombre}
           </p>
         )}
-        <h3 className="mt-1 line-clamp-2 text-base font-semibold text-foreground">
+        <h3 className="mt-1 line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
           {product.nombre}
         </h3>
-        {settings.catalogo.mostrarCategoria && product.categoria && (
-          <p className="mt-0.5 text-xs text-muted-foreground">{product.categoria.nombre}</p>
-        )}
 
         <div className="mt-auto flex items-center justify-between pt-3">
           {settings.catalogo.mostrarPrecio ? (
@@ -86,9 +103,13 @@ export function ProductCard({ product, onClick, onAdd }: ProductCardProps) {
               onAdd();
             }}
             disabled={product.estado === "agotado"}
-            className="h-9 w-9 rounded-full p-0"
+            className="h-9 w-9 rounded-full p-0 shadow-md transition-transform active:scale-90"
           >
-            <Plus className="h-5 w-5" />
+            {product.estado === "agotado" ? (
+              <Heart className="h-4 w-4" />
+            ) : (
+              <Plus className="h-5 w-5" />
+            )}
           </Button>
         </div>
       </div>

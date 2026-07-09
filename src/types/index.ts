@@ -47,6 +47,7 @@ export interface AppUser {
   foto?: string;
   cargo?: string;
   rol?: UserRole;
+  isSuperAdmin?: boolean;
   activo: boolean;
   fechaCreacion: string;
   ultimoAcceso?: string;
@@ -76,6 +77,7 @@ export interface Brand {
   id: string;
   nombre: string;
   logo?: string;
+  color?: string;
   orden: number;
   activo: boolean;
 }
@@ -126,7 +128,14 @@ export interface QuoteProduct {
   subtotal: number;
 }
 
-export type QuoteStatus = "creada" | "enviada" | "vista" | "aceptada" | "rechazada" | "completada" | "pendiente";
+export type QuoteStatus =
+  | "creada"
+  | "enviada"
+  | "vista"
+  | "aceptada"
+  | "rechazada"
+  | "completada"
+  | "pendiente";
 
 export interface QuoteClient {
   nombre?: string;
@@ -239,7 +248,10 @@ export interface ActivityLog {
   fecha: string;
 }
 
-export type SyncQueueItemType = "crearCotizacion" | "actualizarProducto" | "crearProducto";
+export type SyncQueueItemType =
+  | "crearCotizacion"
+  | "actualizarProducto"
+  | "crearProducto";
 
 export interface SyncQueueItem {
   id: string;

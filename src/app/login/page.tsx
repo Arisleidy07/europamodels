@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import { Eye, EyeOff, Loader2, Chrome } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
 
@@ -54,9 +55,7 @@ export default function LoginPage() {
         className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl"
       >
         <div className="mb-8 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-white">
-            EM
-          </div>
+          <Logo variant="horizontal" height={52} className="mx-auto" />
           <h1 className="mt-5 text-2xl font-bold text-foreground">
             Iniciar sesión
           </h1>
