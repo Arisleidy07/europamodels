@@ -6,7 +6,12 @@ import {
   deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
 import { getProducts, saveProducts } from "@/lib/localDb";
 import type { Product } from "@/types";
@@ -60,6 +65,18 @@ export async function updateProduct(
     ...data,
     fechaActualizacion: serverTimestamp(),
   });
+}
+
+export async function deleteProductImage(imageUrl: string): Promise<void> {
+  const storage = getFirebaseStorage();
+  if (!storage) return;
+  if (!imageUrl.includes("firebasestorage.googleapis.com")) return;
+  try {
+    const storageRef = ref(storage, imageUrl);
+    await deleteObject(storageRef);
+  } catch {
+    // Image may already be deleted
+  }
 }
 
 export async function deleteProduct(productId: string): Promise<void> {

@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { ArrowRight, User, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
-import { Logo } from "@/components/Logo";
 import { LicenseGuard } from "@/components/LicenseGuard";
 
 const DEFAULT_VIDEOS = [
@@ -67,7 +66,11 @@ export default function HomePage() {
 
         {/* Top bar */}
         <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 py-5 sm:px-10">
-          <Logo variant="icon" height={48} className="drop-shadow-lg" />
+          <img
+            src="/icons/europa-white.PNG"
+            alt="Europa Models"
+            className="h-12 w-auto drop-shadow-lg"
+          />
           <div className="flex items-center gap-3">
             {isAdmin && (
               <Link
@@ -94,15 +97,15 @@ export default function HomePage() {
           transition={{ duration: 0.6 }}
           className="relative z-10 flex flex-col items-center px-6 text-center"
         >
-          <Logo
-            variant="horizontal"
-            height={80}
-            className="mb-6 drop-shadow-2xl sm:hidden"
+          <img
+            src="/icons/europa-white.PNG"
+            alt="Europa Models"
+            className="mb-6 h-20 w-auto drop-shadow-2xl sm:hidden"
           />
-          <Logo
-            variant="horizontal"
-            height={120}
-            className="mb-8 hidden drop-shadow-2xl sm:block"
+          <img
+            src="/icons/europa-white.PNG"
+            alt="Europa Models"
+            className="mb-8 hidden h-28 w-auto drop-shadow-2xl sm:block lg:h-32"
           />
 
           <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-white drop-shadow-lg sm:text-4xl lg:text-5xl">

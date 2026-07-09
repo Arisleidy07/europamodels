@@ -8,6 +8,7 @@ import {
   createProduct,
   updateProduct,
   uploadProductImages,
+  deleteProductImage,
 } from "@/lib/products";
 import { useAuth } from "@/context/AuthContext";
 import { generateId } from "@/lib/utils";
@@ -59,7 +60,7 @@ export function ProductForm({
 }: ProductFormProps) {
   const { user } = useAuth();
   const [form, setForm] = useState<Partial<Product>>(
-    product ? { ...product, ...initialProduct } : initialProduct,
+    product ? { ...initialProduct, ...product } : { ...initialProduct },
   );
 
   const initialImages = useMemo<ImageItem[]>(() => {
@@ -96,7 +97,11 @@ export function ProductForm({
   };
 
   const removeImage = (id: string) => {
-    setImages((prev) => prev.filter((img) => img.id !== id));
+    const img = images.find((i) => i.id === id);
+    if (img && img.type === "url") {
+      deleteProductImage(img.url);
+    }
+    setImages((prev) => prev.filter((i) => i.id !== id));
   };
 
   const moveImage = (from: number, to: number) => {

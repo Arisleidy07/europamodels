@@ -1,13 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-} from "firebase/firestore";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import {
   getProducts,
@@ -34,6 +28,29 @@ export function useCatalogData() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const latestProds = useRef<Product[]>([]);
+  const latestCats = useRef<Category[]>([]);
+  const latestSubs = useRef<Subcategory[]>([]);
+  const latestBrs = useRef<Brand[]>([]);
+
+  const combine = useCallback(() => {
+    const prods = latestProds.current;
+    const cats = latestCats.current;
+    const subs = latestSubs.current;
+    const brs = latestBrs.current;
+
+    const withRelations = prods.map((p) => ({
+      ...p,
+      marca: brs.find((b) => b.id === p.marcaId),
+      categoria: cats.find((c) => c.id === p.categoriaId),
+      subcategoria: subs.find((s) => s.id === p.subcategoriaId),
+    }));
+    setProducts(withRelations);
+    setCategories([...cats].sort((a, b) => a.orden - b.orden));
+    setSubcategories([...subs].sort((a, b) => a.orden - b.orden));
+    setBrands([...brs].sort((a, b) => a.orden - b.orden));
+  }, []);
+
   useEffect(() => {
     let unsubProducts = () => {};
     let unsubCategories = () => {};
@@ -41,58 +58,33 @@ export function useCatalogData() {
     let unsubBrands = () => {};
 
     const loadLocal = async () => {
-      const [localProducts, localCategories, localSubcategories, localBrands] =
-        await Promise.all([
-          getProducts(),
-          getCategories(),
-          getSubcategories(),
-          getBrands(),
-        ]);
-      combine(localProducts, localCategories, localSubcategories, localBrands);
+      const [lp, lc, ls, lb] = await Promise.all([
+        getProducts(),
+        getCategories(),
+        getSubcategories(),
+        getBrands(),
+      ]);
+      latestProds.current = lp;
+      latestCats.current = lc;
+      latestSubs.current = ls;
+      latestBrs.current = lb;
+      combine();
       setLoading(false);
-    };
-
-    const combine = (
-      prods: Product[],
-      cats: Category[],
-      subs: Subcategory[],
-      brs: Brand[],
-    ) => {
-      const withRelations = prods.map((p) => ({
-        ...p,
-        marca: brs.find((b) => b.id === p.marcaId),
-        categoria: cats.find((c) => c.id === p.categoriaId),
-        subcategoria: subs.find((s) => s.id === p.subcategoriaId),
-      }));
-      setProducts(withRelations);
-      setCategories(cats.sort((a, b) => a.orden - b.orden));
-      setSubcategories(subs.sort((a, b) => a.orden - b.orden));
-      setBrands(brs.sort((a, b) => a.orden - b.orden));
     };
 
     loadLocal();
 
     const firestore = getFirebaseDb();
-    if (!firestore) {
-      return () => {};
-    }
+    if (!firestore) return () => {};
 
     try {
-      const qProducts = query(
-        collection(firestore, "products"),
-        where("visible", "==", true),
-        orderBy("fechaCreacion", "desc"),
-      );
-      unsubProducts = onSnapshot(qProducts, (snap) => {
+      unsubProducts = onSnapshot(collection(firestore, "products"), (snap) => {
         const data = snap.docs.map(
           (d) => ({ id: d.id, ...d.data() }) as Product,
         );
+        latestProds.current = data;
         saveProducts(data);
-        getCategories().then((cats) => {
-          getSubcategories().then((subs) => {
-            getBrands().then((brs) => combine(data, cats, subs, brs));
-          });
-        });
+        combine();
       });
 
       unsubCategories = onSnapshot(
@@ -101,7 +93,9 @@ export function useCatalogData() {
           const data = snap.docs.map(
             (d) => ({ id: d.id, ...d.data() }) as Category,
           );
+          latestCats.current = data;
           saveCategories(data);
+          combine();
         },
       );
 
@@ -111,13 +105,17 @@ export function useCatalogData() {
           const data = snap.docs.map(
             (d) => ({ id: d.id, ...d.data() }) as Subcategory,
           );
+          latestSubs.current = data;
           saveSubcategories(data);
+          combine();
         },
       );
 
       unsubBrands = onSnapshot(collection(firestore, "brands"), (snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Brand);
+        latestBrs.current = data;
         saveBrands(data);
+        combine();
       });
     } catch {
       // Offline: local data is already loaded
@@ -129,7 +127,7 @@ export function useCatalogData() {
       unsubSubcategories();
       unsubBrands();
     };
-  }, []);
+  }, [combine]);
 
   return { products, categories, subcategories, brands, loading };
 }

@@ -21,8 +21,10 @@ service cloud.firestore {
     }
 
     function hasPermission(module, action) {
-      return isActiveUser() && (
-        isAdmin() ||
+      return isAdmin() || (
+        isActiveUser() &&
+        module in getUserData().permisos &&
+        action in getUserData().permisos[module] &&
         getUserData().permisos[module][action] == true
       );
     }
