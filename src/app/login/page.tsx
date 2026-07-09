@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Eye, EyeOff, Loader2, Chrome } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/Logo";
@@ -13,8 +13,7 @@ import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, loginWithGoogle } = useAuth();
-  const [googleLoading, setGoogleLoading] = useState(false);
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -26,24 +25,11 @@ export default function LoginPage() {
     try {
       await login(email, password);
       toast.success("Bienvenido");
-      router.push("/administracion");
+      router.push("/");
     } catch (err: any) {
       toast.error(err.message || "Credenciales incorrectas");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleGoogle = async () => {
-    setGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      toast.success("Bienvenido");
-      router.push("/administracion");
-    } catch (err: any) {
-      toast.error(err.message || "Error al iniciar sesión con Google");
-    } finally {
-      setGoogleLoading(false);
     }
   };
 
@@ -55,7 +41,7 @@ export default function LoginPage() {
         className="w-full max-w-md rounded-3xl bg-white p-8 shadow-xl"
       >
         <div className="mb-8 text-center">
-          <Logo variant="horizontal" height={52} className="mx-auto" />
+          <Logo variant="horizontal" height={64} className="mx-auto" />
           <h1 className="mt-5 text-2xl font-bold text-foreground">
             Iniciar sesión
           </h1>
@@ -98,27 +84,6 @@ export default function LoginPage() {
           <Button type="submit" size="lg" className="w-full" loading={loading}>
             {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
             Entrar
-          </Button>
-
-          <div className="relative my-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-2 text-muted-foreground">o</span>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="w-full"
-            onClick={handleGoogle}
-            loading={googleLoading}
-          >
-            <Chrome className="mr-2 h-5 w-5" />
-            Continuar con Google
           </Button>
         </form>
 

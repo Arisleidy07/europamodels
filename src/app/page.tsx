@@ -18,9 +18,14 @@ const DEFAULT_VIDEOS = [
 export default function HomePage() {
   const { settings } = useSettings();
   const { user, hasPermission } = useAuth();
-  const VIDEOS = settings.inicio.videoInicio
-    ? [settings.inicio.videoInicio]
-    : DEFAULT_VIDEOS;
+
+  const videos: string[] =
+    settings.inicio.videos && settings.inicio.videos.length > 0
+      ? settings.inicio.videos
+      : settings.inicio.videoInicio
+        ? [settings.inicio.videoInicio]
+        : DEFAULT_VIDEOS;
+
   const isAdmin =
     user?.rol === "administrador" ||
     hasPermission("productos", "crear") ||
@@ -36,17 +41,17 @@ export default function HomePage() {
   }, [current]);
 
   const handleEnded = () => {
-    setCurrent((prev) => (prev + 1) % VIDEOS.length);
+    setCurrent((prev) => (prev + 1) % videos.length);
   };
 
   return (
     <LicenseGuard>
       <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black text-white">
-        {/* Background */}
+        {/* Background video carousel */}
         <div className="absolute inset-0 z-0">
           <video
             ref={videoRef}
-            key={VIDEOS[current]}
+            key={videos[current]}
             autoPlay
             muted
             playsInline
@@ -54,21 +59,20 @@ export default function HomePage() {
             onEnded={handleEnded}
             className="h-full w-full object-cover"
           >
-            <source src={VIDEOS[current]} type="video/mp4" />
-            <source src={VIDEOS[current]} type="video/quicktime" />
-            Tu navegador no soporta video.
+            <source src={videos[current]} type="video/mp4" />
+            <source src={videos[current]} type="video/quicktime" />
           </video>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
         </div>
 
         {/* Top bar */}
         <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-6 py-5 sm:px-10">
-          <Logo variant="horizontal" height={38} className="drop-shadow-lg" />
+          <Logo variant="icon" height={48} className="drop-shadow-lg" />
           <div className="flex items-center gap-3">
             {isAdmin && (
               <Link
                 href="/administracion"
-                className="hidden items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20 sm:flex"
+                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
               >
                 <LayoutDashboard className="h-4 w-4" /> Admin
               </Link>
@@ -90,11 +94,22 @@ export default function HomePage() {
           transition={{ duration: 0.6 }}
           className="relative z-10 flex flex-col items-center px-6 text-center"
         >
-          <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-white drop-shadow-lg sm:text-5xl lg:text-6xl">
-            {settings.inicio.tituloPrincipal || settings.empresa.descripcion}
+          <Logo
+            variant="horizontal"
+            height={80}
+            className="mb-6 drop-shadow-2xl sm:hidden"
+          />
+          <Logo
+            variant="horizontal"
+            height={120}
+            className="mb-8 hidden drop-shadow-2xl sm:block"
+          />
+
+          <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-white drop-shadow-lg sm:text-4xl lg:text-5xl">
+            {settings.inicio.tituloPrincipal || "Bienvenido a Europa Models"}
           </h1>
-          <p className="mt-5 max-w-xl text-lg font-light leading-relaxed text-white/90 sm:text-xl">
-            {settings.inicio.subtitulo || "Descubre nuestro catálogo exclusivo"}
+          <p className="mt-4 max-w-xl text-base font-light leading-relaxed text-white/90 sm:text-lg">
+            {settings.inicio.subtitulo || "Tu catálogo exclusivo"}
           </p>
 
           <motion.div

@@ -5,77 +5,81 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isActiveUser() {
-      return isAuthenticated() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.activo == true;
+      return isAuthenticated() && getUserData().activo == true;
     }
 
-    function hasPermission(path) {
-      return isActiveUser() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permisos[path] == true;
+    function isAdmin() {
+      return isActiveUser() && (
+        getUserData().isSuperAdmin == true ||
+        getUserData().rol == 'administrador'
+      );
     }
 
-    function isSuperAdmin() {
-      return isActiveUser() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isSuperAdmin == true;
+    function hasPermission(module, action) {
+      return isActiveUser() && (
+        isAdmin() ||
+        getUserData().permisos[module][action] == true
+      );
     }
 
     function canManageUsers() {
       return isActiveUser() && (
-        isSuperAdmin() ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == 'administrador' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.permisos.usuarios.invitar == true
+        isAdmin() ||
+        getUserData().permisos.usuarios.invitar == true
       );
     }
 
     match /users/{userId} {
       allow read: if isActiveUser() && (canManageUsers() || request.auth.uid == userId);
-
-      // Super admin no puede ser modificado ni eliminado por otros
       allow update: if isActiveUser() && (
-        (request.auth.uid == userId && !resource.data.isSuperAdmin) ||
-        isSuperAdmin() ||
+        request.auth.uid == userId ||
+        isAdmin() ||
         (!resource.data.isSuperAdmin && canManageUsers())
       );
       allow create: if canManageUsers();
-      allow delete: if isActiveUser() && !resource.data.isSuperAdmin && (isSuperAdmin() || canManageUsers());
+      allow delete: if isActiveUser() && !resource.data.isSuperAdmin && (isAdmin() || canManageUsers());
     }
 
     match /products/{productId} {
       allow read: if true;
-      allow create: if hasPermission('productos.crear');
-      allow update: if hasPermission('productos.editar');
-      allow delete: if hasPermission('productos.eliminar');
+      allow create: if hasPermission('productos', 'crear');
+      allow update: if hasPermission('productos', 'editar');
+      allow delete: if hasPermission('productos', 'eliminar');
     }
 
     match /categories/{categoryId} {
       allow read: if true;
-      allow create: if hasPermission('categorias.crear');
-      allow update: if hasPermission('categorias.editar');
-      allow delete: if hasPermission('categorias.eliminar');
+      allow create: if hasPermission('categorias', 'crear');
+      allow update: if hasPermission('categorias', 'editar');
+      allow delete: if hasPermission('categorias', 'eliminar');
     }
 
     match /subcategories/{subcategoryId} {
       allow read: if true;
-      allow create, update, delete: if hasPermission('categorias.crear');
+      allow create, update, delete: if hasPermission('categorias', 'crear');
     }
 
     match /brands/{brandId} {
       allow read: if true;
-      allow create: if hasPermission('marcas.crear');
-      allow update: if hasPermission('marcas.editar');
-      allow delete: if hasPermission('marcas.eliminar');
+      allow create: if hasPermission('marcas', 'crear');
+      allow update: if hasPermission('marcas', 'editar');
+      allow delete: if hasPermission('marcas', 'eliminar');
     }
 
     match /quotes/{quoteId} {
       allow read: if true;
-      allow create: if hasPermission('cotizaciones.crear');
-      allow update, delete: if hasPermission('cotizaciones.verTodas');
+      allow create: if hasPermission('cotizaciones', 'crear');
+      allow update, delete: if hasPermission('cotizaciones', 'verTodas');
     }
 
     match /settings/{document=**} {
       allow read: if true;
-      allow write: if hasPermission('configuracion.editar');
+      allow write: if isAdmin() || hasPermission('configuracion', 'editar');
     }
 
     match /invitations/{invitationId} {

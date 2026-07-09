@@ -24,13 +24,7 @@ async function seed() {
     await settingsRef.set({
       empresa: {
         nombre: "Europa Models",
-        descripcion:
-          "Catálogo exclusivo de perfumes, ropa, relojes y accesorios.",
-        telefono: "",
-        correo: "",
-        direccion: "",
-        sitioWeb: "",
-        redesSociales: { instagram: "", facebook: "", whatsapp: "" },
+        descripcion: "Catálogo exclusivo para el equipo de ventas.",
       },
       catalogo: {
         mostrarPrecio: true,
@@ -54,12 +48,10 @@ async function seed() {
         modoOscuro: false,
       },
       inicio: {
-        tituloPrincipal: "Descubre nuestro catálogo exclusivo",
-        subtitulo:
-          "Perfumes, ropa, relojes y accesorios seleccionados para ti.",
+        tituloPrincipal: "Bienvenido a Europa Models",
+        subtitulo: "Tu catálogo exclusivo",
         textoBoton: "Ver catálogo",
-        videoInicio: "",
-        imagenRespaldo: "",
+        videos: [],
       },
       licenseStatus: "active",
       version: "1.0.0",

@@ -2,14 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import {
-  ShoppingCart,
-  User,
-  Menu,
-  Wifi,
-  WifiOff,
-  LayoutDashboard,
-} from "lucide-react";
+import { ShoppingCart, User, WifiOff, LayoutDashboard } from "lucide-react";
 import { SearchBar } from "@/components/SearchBar";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
@@ -44,41 +37,33 @@ export function Header({
     hasPermission("configuracion", "editar");
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-white/90 backdrop-blur-md">
-      <div className="flex h-[72px] items-center gap-3 px-4 lg:px-8">
-        {showMenu && (
-          <button
-            onClick={onOpenMenu}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted lg:hidden"
-            aria-label="Menú"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        )}
-
-        <Link href="/catalogo" className="flex shrink-0 items-center">
-          <Logo variant="horizontal" height={32} />
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur-md">
+      <div className="flex h-[72px] items-center gap-4 px-4 lg:px-8">
+        {/* Left: Logo */}
+        <Link href="/" className="flex shrink-0 items-center">
+          <Logo variant="horizontal" height={44} className="hidden sm:block" />
+          <Logo variant="isotype" height={40} className="sm:hidden" />
         </Link>
 
+        {/* Center: Search (main element) */}
         {onSearchChange && (
-          <div className="mx-4 hidden flex-1 md:block">
+          <div className="min-w-0 flex-1">
             <SearchBar value={search} onChange={onSearchChange} />
           </div>
         )}
 
-        <div className="ml-auto flex items-center gap-2 sm:gap-4">
-          <div className="hidden items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground sm:flex">
-            {online ? (
-              <Wifi className="h-3.5 w-3.5 text-success" />
-            ) : (
-              <WifiOff className="h-3.5 w-3.5 text-warning" />
-            )}
-            {online ? "Sincronizado" : "Sin conexión"}
-          </div>
+        {/* Right: Actions */}
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          {!online && (
+            <div className="hidden items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 sm:flex">
+              <WifiOff className="h-3.5 w-3.5" />
+              Sin conexión
+            </div>
+          )}
 
           <button
             onClick={onOpenCart}
-            className="relative flex h-11 w-11 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted"
+            className="relative flex h-10 w-10 items-center justify-center rounded-xl text-foreground transition-colors hover:bg-muted"
             aria-label="Carrito"
           >
             <ShoppingCart className="h-5 w-5" />
@@ -92,10 +77,10 @@ export function Header({
           {isAdmin && (
             <Link
               href="/administracion"
-              className="hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 sm:flex"
+              className="flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90 sm:px-4"
             >
               <LayoutDashboard className="h-4 w-4" />
-              Admin
+              <span className="hidden sm:inline">Admin</span>
             </Link>
           )}
 

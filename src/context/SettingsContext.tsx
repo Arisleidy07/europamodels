@@ -9,7 +9,7 @@ import type { AppSettings } from "@/types";
 const defaultSettings: AppSettings = {
   empresa: {
     nombre: "Europa Models",
-    descripcion: "Catálogo exclusivo de perfumes, ropa, relojes y accesorios.",
+    descripcion: "Catálogo exclusivo para el equipo de ventas.",
   },
   catalogo: {
     mostrarPrecio: true,
@@ -32,9 +32,10 @@ const defaultSettings: AppSettings = {
     modoOscuro: false,
   },
   inicio: {
-    tituloPrincipal: "Descubre nuestro catálogo exclusivo",
-    subtitulo: "Perfumes, ropa, relojes y accesorios seleccionados para ti.",
+    tituloPrincipal: "Bienvenido a Europa Models",
+    subtitulo: "Tu catálogo exclusivo",
     textoBoton: "Ver catálogo",
+    videos: [],
   },
   licenseStatus: "active",
 };

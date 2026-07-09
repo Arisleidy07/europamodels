@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { Save, Loader2, Image, Palette } from "lucide-react";
+import { useState, useRef } from "react";
+import { Save, Loader2, Upload, Trash2, Video, Monitor } from "lucide-react";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useSettings } from "@/context/SettingsContext";
 import { updateSettings } from "@/lib/users";
+import { getFirebaseStorage } from "@/lib/firebase";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 
@@ -13,8 +20,13 @@ export default function AdminSettings() {
   const { settings } = useSettings();
   const [form, setForm] = useState({ ...settings });
   const [saving, setSaving] = useState(false);
+  const [uploadingVideo, setUploadingVideo] = useState(false);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (path: string, value: string | boolean | number) => {
+  const handleChange = (
+    path: string,
+    value: string | boolean | number | string[],
+  ) => {
     const keys = path.split(".");
     setForm((prev: any) => {
       const next = { ...prev };
@@ -38,6 +50,53 @@ export default function AdminSettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const storage = getFirebaseStorage();
+    if (!storage) {
+      toast.error("Firebase Storage no está configurado");
+      return;
+    }
+    setUploadingVideo(true);
+    try {
+      const currentVideos = form.inicio.videos || [];
+      const newVideos = [...currentVideos];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileName = `videos/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, fileName);
+        await uploadBytes(storageRef, file);
+        const url = await getDownloadURL(storageRef);
+        newVideos.push(url);
+      }
+      handleChange("inicio.videos", newVideos);
+      toast.success(`${files.length} video(s) subido(s)`);
+    } catch (err: any) {
+      toast.error(err.message || "Error al subir video");
+    } finally {
+      setUploadingVideo(false);
+      if (videoInputRef.current) videoInputRef.current.value = "";
+    }
+  };
+
+  const handleRemoveVideo = async (index: number) => {
+    const currentVideos = form.inicio.videos || [];
+    const url = currentVideos[index];
+    const storage = getFirebaseStorage();
+    if (storage && url.includes("firebasestorage.googleapis.com")) {
+      try {
+        const storageRef = ref(storage, url);
+        await deleteObject(storageRef);
+      } catch {
+        // File may already be deleted
+      }
+    }
+    const updated = currentVideos.filter((_: string, i: number) => i !== index);
+    handleChange("inicio.videos", updated);
+    toast.success("Video eliminado");
   };
 
   const Toggle = ({
@@ -75,37 +134,15 @@ export default function AdminSettings() {
         <h3 className="mb-4 text-lg font-bold">Empresa</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
-            label="Nombre"
+            label="Nombre de la empresa"
             value={form.empresa.nombre}
             onChange={(e) => handleChange("empresa.nombre", e.target.value)}
           />
           <Input
-            label="Teléfono"
-            value={form.empresa.telefono || ""}
-            onChange={(e) => handleChange("empresa.telefono", e.target.value)}
-          />
-          <Input
-            label="Correo"
-            value={form.empresa.correo || ""}
-            onChange={(e) => handleChange("empresa.correo", e.target.value)}
-          />
-          <Input
-            label="Dirección"
-            value={form.empresa.direccion || ""}
-            onChange={(e) => handleChange("empresa.direccion", e.target.value)}
-          />
-          <Input
-            label="Instagram"
-            value={form.empresa.redesSociales?.instagram || ""}
+            label="Descripción"
+            value={form.empresa.descripcion || ""}
             onChange={(e) =>
-              handleChange("empresa.redesSociales.instagram", e.target.value)
-            }
-          />
-          <Input
-            label="Facebook"
-            value={form.empresa.redesSociales?.facebook || ""}
-            onChange={(e) =>
-              handleChange("empresa.redesSociales.facebook", e.target.value)
+              handleChange("empresa.descripcion", e.target.value)
             }
           />
         </div>
@@ -113,22 +150,10 @@ export default function AdminSettings() {
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
-          <Image className="h-5 w-5 text-primary" />
+          <Monitor className="h-5 w-5 text-primary" />
           <h3 className="text-lg font-bold">Pantalla de inicio</h3>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
-            label="URL del video"
-            value={form.inicio.videoInicio || ""}
-            onChange={(e) => handleChange("inicio.videoInicio", e.target.value)}
-          />
-          <Input
-            label="Imagen de respaldo"
-            value={form.inicio.imagenRespaldo || ""}
-            onChange={(e) =>
-              handleChange("inicio.imagenRespaldo", e.target.value)
-            }
-          />
           <Input
             label="Título principal"
             value={form.inicio.tituloPrincipal}
@@ -151,47 +176,55 @@ export default function AdminSettings() {
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center gap-2">
-          <Palette className="h-5 w-5 text-primary" />
-          <h3 className="text-lg font-bold">Apariencia</h3>
+          <Video className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-bold">Videos de fondo</h3>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">
-              Color principal
-            </label>
-            <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
-              <input
-                type="color"
-                value={form.apariencia.colorPrincipal}
-                onChange={(e) =>
-                  handleChange("apariencia.colorPrincipal", e.target.value)
-                }
-                className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0"
-              />
-              <span className="text-sm text-muted-foreground">
-                {form.apariencia.colorPrincipal}
+        <p className="mb-4 text-sm text-muted-foreground">
+          Sube videos que se reproducirán como carrusel en la pantalla de
+          inicio.
+        </p>
+
+        <div className="space-y-3">
+          {(form.inicio.videos || []).map((url: string, idx: number) => (
+            <div
+              key={idx}
+              className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3"
+            >
+              <Video className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="min-w-0 flex-1 truncate text-sm">
+                Video {idx + 1}
               </span>
+              <button
+                onClick={() => handleRemoveVideo(idx)}
+                className="rounded-lg p-1.5 text-danger hover:bg-red-50"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
             </div>
-          </div>
-          <div>
-            <label className="mb-1.5 block text-sm font-medium">
-              Color secundario
-            </label>
-            <div className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5">
-              <input
-                type="color"
-                value={form.apariencia.colorSecundario}
-                onChange={(e) =>
-                  handleChange("apariencia.colorSecundario", e.target.value)
-                }
-                className="h-8 w-8 cursor-pointer rounded border-0 bg-transparent p-0"
-              />
-              <span className="text-sm text-muted-foreground">
-                {form.apariencia.colorSecundario}
-              </span>
-            </div>
-          </div>
+          ))}
         </div>
+
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/*"
+          multiple
+          onChange={handleVideoUpload}
+          className="hidden"
+        />
+        <Button
+          variant="outline"
+          className="mt-4"
+          onClick={() => videoInputRef.current?.click()}
+          disabled={uploadingVideo}
+        >
+          {uploadingVideo ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Upload className="mr-2 h-4 w-4" />
+          )}
+          {uploadingVideo ? "Subiendo..." : "Subir videos"}
+        </Button>
       </section>
 
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
@@ -206,13 +239,6 @@ export default function AdminSettings() {
                 "catalogo.productosPorPagina",
                 parseInt(e.target.value) || 12,
               )
-            }
-          />
-          <Input
-            label="Orden por defecto"
-            value={form.catalogo.ordenDefault || "recientes"}
-            onChange={(e) =>
-              handleChange("catalogo.ordenDefault", e.target.value)
             }
           />
           <Toggle
@@ -249,24 +275,6 @@ export default function AdminSettings() {
             }
           />
           <Input
-            label="Longitud numérica"
-            type="number"
-            value={form.cotizaciones.longitudNumeros}
-            onChange={(e) =>
-              handleChange(
-                "cotizaciones.longitudNumeros",
-                parseInt(e.target.value) || 4,
-              )
-            }
-          />
-          <Input
-            label="Mensaje automático"
-            value={form.cotizaciones.mensajeAutomatico}
-            onChange={(e) =>
-              handleChange("cotizaciones.mensajeAutomatico", e.target.value)
-            }
-          />
-          <Input
             label="Validez (días)"
             type="number"
             value={form.cotizaciones.validezDias || 7}
@@ -275,6 +283,13 @@ export default function AdminSettings() {
                 "cotizaciones.validezDias",
                 parseInt(e.target.value) || 7,
               )
+            }
+          />
+          <Input
+            label="Mensaje automático"
+            value={form.cotizaciones.mensajeAutomatico}
+            onChange={(e) =>
+              handleChange("cotizaciones.mensajeAutomatico", e.target.value)
             }
           />
         </div>

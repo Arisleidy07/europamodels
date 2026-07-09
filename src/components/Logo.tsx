@@ -4,13 +4,19 @@ import React from "react";
 import { cn } from "@/lib/utils";
 
 interface LogoProps {
-  variant?: "horizontal" | "isotype";
+  variant?: "horizontal" | "isotype" | "icon";
   className?: string;
   height?: number;
 }
 
-export function Logo({ variant = "horizontal", className, height = 36 }: LogoProps) {
-  const src = variant === "horizontal" ? "/icons/europamodels.PNG" : "/icons/europa.PNG";
+export function Logo({
+  variant = "horizontal",
+  className,
+  height = 36,
+}: LogoProps) {
+  const src =
+    variant === "horizontal" ? "/icons/europamodels.PNG" : "/icons/europa.PNG";
+  const alt = variant === "horizontal" ? "Europa Models" : "Europa Models Logo";
   return (
     <img
       src={src}

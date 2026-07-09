@@ -201,6 +201,7 @@ export interface AppearanceSettings {
 
 export interface HomeSettings {
   videoInicio?: string;
+  videos?: string[];
   imagenRespaldo?: string;
   tituloPrincipal: string;
   subtitulo?: string;
