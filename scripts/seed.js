@@ -19,49 +19,53 @@ const db = getFirestore();
 
 async function seed() {
   const settingsRef = db.collection("settings").doc("main");
-  await settingsRef.set({
-    empresa: {
-      nombre: "Europa Models",
-      descripcion:
-        "Catálogo exclusivo de perfumes, ropa, relojes y accesorios.",
-      telefono: "",
-      correo: "",
-      direccion: "",
-      sitioWeb: "",
-      redesSociales: { instagram: "", facebook: "", whatsapp: "" },
+  await settingsRef.set(
+    {
+      empresa: {
+        nombre: "Europa Models",
+        descripcion:
+          "Catálogo exclusivo de perfumes, ropa, relojes y accesorios.",
+        telefono: "",
+        correo: "",
+        direccion: "",
+        sitioWeb: "",
+        redesSociales: { instagram: "", facebook: "", whatsapp: "" },
+      },
+      catalogo: {
+        mostrarPrecio: true,
+        mostrarStock: false,
+        mostrarMarca: true,
+        mostrarCategoria: true,
+        productosPorPagina: 24,
+        ordenDefault: "recientes",
+      },
+      cotizaciones: {
+        prefijo: "COT",
+        longitudNumeros: 6,
+        mensajeAutomatico:
+          "Hola, le comparto la cotización solicitada de Europa Models.",
+        observacionesAutomaticas: "Cotización sujeta a disponibilidad.",
+        validezDias: 7,
+      },
+      apariencia: {
+        colorPrincipal: "#2563eb",
+        colorSecundario: "#ffffff",
+        modoOscuro: false,
+      },
+      inicio: {
+        tituloPrincipal: "Descubre nuestro catálogo exclusivo",
+        subtitulo:
+          "Perfumes, ropa, relojes y accesorios seleccionados para ti.",
+        textoBoton: "Ver catálogo",
+        videoInicio: "",
+        imagenRespaldo: "",
+      },
+      licenseStatus: "active",
+      version: "1.0.0",
     },
-    catalogo: {
-      mostrarPrecio: true,
-      mostrarStock: false,
-      mostrarMarca: true,
-      mostrarCategoria: true,
-      productosPorPagina: 24,
-      ordenDefault: "recientes",
-    },
-    cotizaciones: {
-      prefijo: "COT",
-      longitudNumeros: 6,
-      mensajeAutomatico:
-        "Hola, le comparto la cotización solicitada de Europa Models.",
-      observacionesAutomaticas: "Cotización sujeta a disponibilidad.",
-      validezDias: 7,
-    },
-    apariencia: {
-      colorPrincipal: "#2563eb",
-      colorSecundario: "#ffffff",
-      modoOscuro: false,
-    },
-    inicio: {
-      tituloPrincipal: "Descubre nuestro catálogo exclusivo",
-      subtitulo: "Perfumes, ropa, relojes y accesorios seleccionados para ti.",
-      textoBoton: "Ver catálogo",
-      videoInicio: "",
-      imagenRespaldo: "",
-    },
-    licenseStatus: "active",
-    version: "1.0.0",
-  });
-  console.log("Configuración inicial creada.");
+    { merge: true },
+  );
+  console.log("Configuración inicial creada/actualizada.");
 
   const categories = [
     "Perfumes",
@@ -71,10 +75,16 @@ async function seed() {
     "Accesorios",
     "Bolsos",
   ];
-  for (let i = 0; i < categories.length; i++) {
+  const existingCats = await db.collection("categories").get();
+  const existingCatNames = new Set(
+    existingCats.docs.map((d) => d.data().nombre),
+  );
+  let catIndex = existingCats.docs.length;
+  for (const nombre of categories) {
+    if (existingCatNames.has(nombre)) continue;
     await db.collection("categories").add({
-      nombre: categories[i],
-      orden: i + 1,
+      nombre,
+      orden: ++catIndex,
       activo: true,
     });
   }
@@ -88,10 +98,16 @@ async function seed() {
     "Carolina Herrera",
     "Paco Rabanne",
   ];
-  for (let i = 0; i < brands.length; i++) {
+  const existingBrands = await db.collection("brands").get();
+  const existingBrandNames = new Set(
+    existingBrands.docs.map((d) => d.data().nombre),
+  );
+  let brandIndex = existingBrands.docs.length;
+  for (const nombre of brands) {
+    if (existingBrandNames.has(nombre)) continue;
     await db.collection("brands").add({
-      nombre: brands[i],
-      orden: i + 1,
+      nombre,
+      orden: ++brandIndex,
       activo: true,
     });
   }
@@ -103,6 +119,39 @@ async function seed() {
   for (const user of list.users) {
     const userRef = db.collection("users").doc(user.uid);
     const snap = await userRef.get();
+    const adminPermissions = {
+      productos: {
+        crear: true,
+        editar: true,
+        eliminar: true,
+        ocultar: true,
+        cambiarPrecios: true,
+        cambiarStock: true,
+        subirImagenes: true,
+      },
+      categorias: {
+        crear: true,
+        editar: true,
+        eliminar: true,
+        cambiarOrden: true,
+      },
+      marcas: { crear: true, editar: true, eliminar: true },
+      cotizaciones: {
+        crear: true,
+        verPropias: true,
+        verTodas: true,
+        eliminar: true,
+        cambiarEstado: true,
+      },
+      usuarios: {
+        invitar: true,
+        editarPermisos: true,
+        desactivar: true,
+        eliminar: true,
+      },
+      configuracion: { editar: true },
+    };
+
     if (!snap.exists) {
       await userRef.set({
         nombre:
@@ -112,42 +161,16 @@ async function seed() {
         activo: true,
         cargo: "Administrador",
         fechaCreacion: user.metadata.creationTime || new Date().toISOString(),
-        permisos: {
-          productos: {
-            crear: true,
-            editar: true,
-            eliminar: true,
-            ocultar: true,
-            cambiarPrecios: true,
-            cambiarStock: true,
-            subirImagenes: true,
-          },
-          categorias: {
-            crear: true,
-            editar: true,
-            eliminar: true,
-            cambiarOrden: true,
-          },
-          marcas: { crear: true, editar: true, eliminar: true },
-          cotizaciones: {
-            crear: true,
-            verPropias: true,
-            verTodas: true,
-            eliminar: true,
-            cambiarEstado: true,
-          },
-          usuarios: {
-            invitar: true,
-            editarPermisos: true,
-            desactivar: true,
-            eliminar: true,
-          },
-          configuracion: { editar: true },
-        },
+        permisos: adminPermissions,
       });
       console.log(`Usuario admin creado para ${user.email}`);
     } else {
-      console.log(`Usuario ${user.email} ya tiene documento en Firestore`);
+      await userRef.update({
+        rol: "administrador",
+        activo: true,
+        permisos: adminPermissions,
+      });
+      console.log(`Permisos de admin actualizados para ${user.email}`);
     }
   }
 }

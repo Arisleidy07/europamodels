@@ -1,38 +1,55 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { LicenseGuard } from "@/components/LicenseGuard";
 
+const VIDEOS = [
+  "/videos/perfume1.mov",
+  "/videos/perfume2.mov",
+  "/videos/perfume3.mov",
+];
+
 export default function HomePage() {
   const { settings } = useSettings();
   const { user } = useAuth();
+  const [current, setCurrent] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  const videoUrl = settings.inicio.videoInicio;
-  const backgroundImage = settings.inicio.imagenRespaldo || "/hero-fallback.jpg";
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.load();
+    video.play().catch(() => {});
+  }, [current]);
+
+  const handleEnded = () => {
+    setCurrent((prev) => (prev + 1) % VIDEOS.length);
+  };
 
   return (
     <LicenseGuard>
       <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black text-white">
         {/* Background */}
         <div className="absolute inset-0 z-0">
-          {videoUrl ? (
-            <video
-              autoPlay
-              muted
-              loop
-              playsInline
-              poster={backgroundImage}
-              className="h-full w-full object-cover"
-            >
-              <source src={videoUrl} type="video/mp4" />
-            </video>
-          ) : (
-            <img src={backgroundImage} alt="" className="h-full w-full object-cover" />
-          )}
+          <video
+            ref={videoRef}
+            key={VIDEOS[current]}
+            autoPlay
+            muted
+            playsInline
+            preload="auto"
+            onEnded={handleEnded}
+            className="h-full w-full object-cover"
+          >
+            <source src={VIDEOS[current]} type="video/mp4" />
+            <source src={VIDEOS[current]} type="video/quicktime" />
+            Tu navegador no soporta video.
+          </video>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
         </div>
 
@@ -73,7 +90,11 @@ export default function HomePage() {
             {settings.inicio.tituloPrincipal || settings.empresa.descripcion}
           </p>
 
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }} className="mt-10">
+          <motion.div
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.97 }}
+            className="mt-10"
+          >
             <Link
               href="/catalogo"
               className="group inline-flex items-center gap-3 rounded-full bg-white px-8 py-4 text-lg font-semibold text-black shadow-2xl transition-all hover:bg-gray-100"

@@ -18,4 +18,14 @@ export default withPWA({
   register: true,
   skipWaiting: true,
   disable: process.env.NODE_ENV === "development",
+  runtimeCaching: [
+    {
+      urlPattern: /\/videos\/.+\.(mov|mp4|webm)$/i,
+      handler: "CacheFirst",
+      options: {
+        cacheName: "videos-local",
+        expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 },
+      },
+    },
+  ],
 })(nextConfig);

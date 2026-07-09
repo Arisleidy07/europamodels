@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,6 +9,7 @@ import {
   LayoutGrid,
   Tag,
   Users,
+  User,
   Settings,
   LogOut,
   Plus,
@@ -23,6 +24,11 @@ import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ProductForm } from "@/components/admin/ProductForm";
+import AdminCategories from "@/components/admin/AdminCategories";
+import AdminBrands from "@/components/admin/AdminBrands";
+import AdminTeam from "@/components/admin/AdminTeam";
+import AdminSettings from "@/components/admin/AdminSettings";
+import AdminProfile from "@/components/admin/AdminProfile";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { useSettings } from "@/context/SettingsContext";
@@ -31,21 +37,61 @@ import { normalizeText, formatCurrency } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { Product, Category, Subcategory, Brand } from "@/types";
 
-const tabs = [
-  { id: "productos", label: "Productos", icon: Package },
-  { id: "categorias", label: "Categorías", icon: LayoutGrid },
-  { id: "marcas", label: "Marcas", icon: Tag },
-  { id: "equipo", label: "Equipo", icon: Users },
-  { id: "configuracion", label: "Configuración", icon: Settings },
-];
-
 export default function AdminPage() {
   const router = useRouter();
   const { user, logout, hasPermission } = useAuth();
-  const { products, categories, subcategories, brands, loading } = useCatalogData();
+  const { products, categories, subcategories, brands, loading } =
+    useCatalogData();
   const { settings } = useSettings();
 
-  const [activeTab, setActiveTab] = useState("productos");
+  const tabs = [
+    { id: "productos", label: "Productos", icon: Package, visible: true },
+    {
+      id: "categorias",
+      label: "Categorías",
+      icon: LayoutGrid,
+      visible:
+        hasPermission("categorias", "crear") ||
+        hasPermission("categorias", "editar") ||
+        hasPermission("categorias", "eliminar"),
+    },
+    {
+      id: "marcas",
+      label: "Marcas",
+      icon: Tag,
+      visible:
+        hasPermission("marcas", "crear") ||
+        hasPermission("marcas", "editar") ||
+        hasPermission("marcas", "eliminar"),
+    },
+    {
+      id: "equipo",
+      label: "Equipo",
+      icon: Users,
+      visible:
+        hasPermission("usuarios", "invitar") ||
+        hasPermission("usuarios", "editarPermisos") ||
+        hasPermission("usuarios", "desactivar") ||
+        hasPermission("usuarios", "eliminar") ||
+        user?.rol === "administrador",
+    },
+    {
+      id: "configuracion",
+      label: "Configuración",
+      icon: Settings,
+      visible: hasPermission("configuracion", "editar"),
+    },
+    { id: "perfil", label: "Mi perfil", icon: User, visible: true },
+  ].filter((t) => t.visible);
+
+  const [activeTab, setActiveTab] = useState(tabs[0]?.id || "productos");
+
+  useEffect(() => {
+    if (!tabs.find((t) => t.id === activeTab)) {
+      setActiveTab(tabs[0]?.id || "productos");
+    }
+  }, [tabs, activeTab]);
+
   const [search, setSearch] = useState("");
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -54,8 +100,12 @@ export default function AdminPage() {
   if (!user) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-white px-6 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Acceso restringido</h1>
-        <p className="mt-2 text-muted-foreground">Debes iniciar sesión para acceder al panel.</p>
+        <h1 className="text-2xl font-bold text-foreground">
+          Acceso restringido
+        </h1>
+        <p className="mt-2 text-muted-foreground">
+          Debes iniciar sesión para acceder al panel.
+        </p>
         <Button onClick={() => router.push("/login")} className="mt-6">
           Iniciar sesión
         </Button>
@@ -63,7 +113,8 @@ export default function AdminPage() {
     );
   }
 
-  const canManageProducts = hasPermission("productos", "crear") || hasPermission("productos", "editar");
+  const canManageProducts =
+    hasPermission("productos", "crear") || hasPermission("productos", "editar");
   const canDeleteProducts = hasPermission("productos", "eliminar");
 
   const filteredProducts = products.filter((p) => {
@@ -105,7 +156,9 @@ export default function AdminPage() {
               </div>
               <div>
                 <p className="font-semibold text-foreground">{user.nombre}</p>
-                <p className="text-xs text-muted-foreground">{user.cargo || user.rol}</p>
+                <p className="text-xs text-muted-foreground">
+                  {user.cargo || user.rol}
+                </p>
               </div>
             </div>
           </div>
@@ -173,7 +226,10 @@ export default function AdminPage() {
               {loading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className="h-16 animate-pulse rounded-xl bg-gray-100" />
+                    <div
+                      key={i}
+                      className="h-16 animate-pulse rounded-xl bg-gray-100"
+                    />
                   ))}
                 </div>
               ) : (
@@ -182,8 +238,12 @@ export default function AdminPage() {
                     <thead className="bg-muted/50 text-muted-foreground">
                       <tr>
                         <th className="px-4 py-3 font-medium">Producto</th>
-                        <th className="hidden px-4 py-3 font-medium md:table-cell">Marca</th>
-                        <th className="hidden px-4 py-3 font-medium md:table-cell">Categoría</th>
+                        <th className="hidden px-4 py-3 font-medium md:table-cell">
+                          Marca
+                        </th>
+                        <th className="hidden px-4 py-3 font-medium md:table-cell">
+                          Categoría
+                        </th>
                         <th className="px-4 py-3 font-medium">Precio</th>
                         <th className="px-4 py-3 font-medium">Estado</th>
                         <th className="px-4 py-3 font-medium"></th>
@@ -195,11 +255,16 @@ export default function AdminPage() {
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
                               <img
-                                src={product.imagenes[0] || "/placeholder-product.svg"}
+                                src={
+                                  product.imagenes[0] ||
+                                  "/placeholder-product.svg"
+                                }
                                 alt=""
                                 className="h-10 w-10 rounded-lg object-cover"
                               />
-                              <span className="font-medium text-foreground">{product.nombre}</span>
+                              <span className="font-medium text-foreground">
+                                {product.nombre}
+                              </span>
                             </div>
                           </td>
                           <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
@@ -209,7 +274,9 @@ export default function AdminPage() {
                             {product.categoria?.nombre}
                           </td>
                           <td className="px-4 py-3 font-medium text-foreground">
-                            {formatCurrency(product.precioOferta || product.precio)}
+                            {formatCurrency(
+                              product.precioOferta || product.precio,
+                            )}
                           </td>
                           <td className="px-4 py-3">
                             <span
@@ -217,8 +284,8 @@ export default function AdminPage() {
                                 product.estado === "publicado"
                                   ? "bg-green-50 text-success"
                                   : product.estado === "agotado"
-                                  ? "bg-red-50 text-danger"
-                                  : "bg-gray-100 text-muted-foreground"
+                                    ? "bg-red-50 text-danger"
+                                    : "bg-gray-100 text-muted-foreground"
                               }`}
                             >
                               {product.estado}
@@ -227,7 +294,11 @@ export default function AdminPage() {
                           <td className="px-4 py-3 text-right">
                             <div className="relative inline-block">
                               <button
-                                onClick={() => setMenuOpen(menuOpen === product.id ? null : product.id)}
+                                onClick={() =>
+                                  setMenuOpen(
+                                    menuOpen === product.id ? null : product.id,
+                                  )
+                                }
                                 className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
                               >
                                 <MoreVertical className="h-4 w-4" />
@@ -246,7 +317,9 @@ export default function AdminPage() {
                                   </button>
                                   <button
                                     onClick={() => {
-                                      navigator.clipboard.writeText(`${window.location.origin}/producto/${product.id}`);
+                                      navigator.clipboard.writeText(
+                                        `${window.location.origin}/producto/${product.id}`,
+                                      );
                                       toast.success("Enlace copiado");
                                       setMenuOpen(null);
                                     }}
@@ -278,29 +351,15 @@ export default function AdminPage() {
             </div>
           )}
 
-          {activeTab === "categorias" && (
-            <div className="rounded-2xl border border-border bg-white p-6 text-center text-muted-foreground">
-              Gestión de categorías disponible en próxima fase de detalle.
-            </div>
-          )}
+          {activeTab === "categorias" && <AdminCategories />}
 
-          {activeTab === "marcas" && (
-            <div className="rounded-2xl border border-border bg-white p-6 text-center text-muted-foreground">
-              Gestión de marcas disponible en próxima fase de detalle.
-            </div>
-          )}
+          {activeTab === "marcas" && <AdminBrands />}
 
-          {activeTab === "equipo" && (
-            <div className="rounded-2xl border border-border bg-white p-6 text-center text-muted-foreground">
-              Gestión de equipo disponible en próxima fase de detalle.
-            </div>
-          )}
+          {activeTab === "equipo" && <AdminTeam />}
 
-          {activeTab === "configuracion" && (
-            <div className="rounded-2xl border border-border bg-white p-6 text-center text-muted-foreground">
-              Configuración avanzada disponible en próxima fase de detalle.
-            </div>
-          )}
+          {activeTab === "configuracion" && <AdminSettings />}
+
+          {activeTab === "perfil" && <AdminProfile />}
         </main>
       </div>
 
