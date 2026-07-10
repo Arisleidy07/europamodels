@@ -10,8 +10,12 @@ import {
   uploadProductImages,
   deleteProductImage,
 } from "@/lib/products";
-import { createCategory } from "@/lib/categories";
-import { createBrand } from "@/lib/categories";
+import {
+  createCategory,
+  deleteCategory,
+  createBrand,
+  deleteBrand,
+} from "@/lib/categories";
 import { useAuth } from "@/context/AuthContext";
 import { generateId, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -28,16 +32,20 @@ const PRESET_COLORS = [
   "#be123c",
 ];
 
-function QuickCreateModal({
+function QuickManageModal({
   title,
   open,
   onClose,
+  items,
   onCreated,
+  onDelete,
 }: {
   title: string;
   open: boolean;
   onClose: () => void;
+  items: { id: string; nombre: string; color?: string }[];
   onCreated: (name: string, color: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const [name, setName] = React.useState("");
   const [color, setColor] = React.useState(PRESET_COLORS[0]);
@@ -52,7 +60,6 @@ function QuickCreateModal({
       await onCreated(name.trim(), color);
       setName("");
       setColor(PRESET_COLORS[0]);
-      onClose();
     } catch (err: any) {
       toast.error(err.message || "Error al crear");
     } finally {
@@ -60,12 +67,65 @@ function QuickCreateModal({
     }
   };
 
+  const handleDelete = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+    try {
+      await onDelete(id);
+      toast.success(`"${nombre}" eliminado`);
+    } catch (err: any) {
+      toast.error(err.message || "Error al eliminar");
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
-        <h3 className="mb-4 text-lg font-semibold">{title}</h3>
-        <div className="space-y-4">
+      <div className="relative z-10 w-full max-w-md rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border px-6 py-4">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full p-1.5 text-muted-foreground hover:bg-muted"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {items.length > 0 && (
+          <div className="max-h-48 overflow-y-auto border-b border-border px-6 py-3">
+            <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">
+              Existentes
+            </p>
+            <div className="space-y-1">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="h-4 w-4 shrink-0 rounded-full"
+                      style={{
+                        backgroundColor: item.color || PRESET_COLORS[0],
+                      }}
+                    />
+                    <span className="text-sm font-medium">{item.nombre}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id, item.nombre)}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-red-50 hover:text-danger"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-4 p-6">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-foreground">
               Nombre
@@ -74,7 +134,7 @@ function QuickCreateModal({
               value={name}
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-              placeholder={`Nombre de la ${title.toLowerCase().replace("nueva ", "")}`}
+              placeholder="Nuevo nombre..."
               autoFocus
               className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
@@ -106,7 +166,7 @@ function QuickCreateModal({
               onClick={onClose}
               className="rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
             >
-              Cancelar
+              Cerrar
             </button>
             <button
               type="button"
@@ -690,10 +750,11 @@ export function ProductForm({
         </Button>
       </div>
 
-      <QuickCreateModal
-        title="Nueva categoría"
+      <QuickManageModal
+        title="Categorías"
         open={showNewCategory}
         onClose={() => setShowNewCategory(false)}
+        items={categories}
         onCreated={async (name, color) => {
           const created = await createCategory({
             nombre: name,
@@ -704,12 +765,23 @@ export function ProductForm({
           setForm((prev) => ({ ...prev, categoriaId: created.id }));
           toast.success("Categoría creada");
         }}
+        onDelete={async (id) => {
+          await deleteCategory(id);
+          if (form.categoriaId === id) {
+            setForm((prev) => ({
+              ...prev,
+              categoriaId: "",
+              subcategoriaId: "",
+            }));
+          }
+        }}
       />
 
-      <QuickCreateModal
-        title="Nueva marca"
+      <QuickManageModal
+        title="Marcas"
         open={showNewBrand}
         onClose={() => setShowNewBrand(false)}
+        items={brands}
         onCreated={async (name, color) => {
           const created = await createBrand({
             nombre: name,
@@ -719,6 +791,12 @@ export function ProductForm({
           });
           setForm((prev) => ({ ...prev, marcaId: created.id }));
           toast.success("Marca creada");
+        }}
+        onDelete={async (id) => {
+          await deleteBrand(id);
+          if (form.marcaId === id) {
+            setForm((prev) => ({ ...prev, marcaId: "" }));
+          }
         }}
       />
     </div>
