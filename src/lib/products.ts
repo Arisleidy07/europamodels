@@ -44,11 +44,16 @@ export async function createProduct(
 ): Promise<Product> {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
-  const docRef = await addDoc(collection(db, "products"), {
+  // Strip undefined values — Firestore rejects them
+  const clean: Record<string, any> = {
     ...product,
     fechaCreacion: serverTimestamp(),
     fechaActualizacion: serverTimestamp(),
+  };
+  Object.keys(clean).forEach((k) => {
+    if (clean[k] === undefined) delete clean[k];
   });
+  const docRef = await addDoc(collection(db, "products"), clean);
   const created = { ...product, id: docRef.id } as Product;
   const local = await getProducts();
   await saveProducts([...local, created]);
@@ -61,10 +66,15 @@ export async function updateProduct(
 ): Promise<void> {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
-  await updateDoc(doc(db, "products", productId), {
+  // Strip undefined values — Firestore rejects them
+  const clean: Record<string, any> = {
     ...data,
     fechaActualizacion: serverTimestamp(),
+  };
+  Object.keys(clean).forEach((k) => {
+    if (clean[k] === undefined) delete clean[k];
   });
+  await updateDoc(doc(db, "products", productId), clean);
 }
 
 export async function deleteProductImage(imageUrl: string): Promise<void> {

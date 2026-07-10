@@ -431,18 +431,25 @@ export function ProductForm({
         oferta:
           !!form.precioOferta &&
           form.precioOferta > 0 &&
-          form.precioOferta < form.precio,
-        precio: Number(form.precio),
+          form.precioOferta < (form.precio ?? 0),
+        precio: Number(form.precio) || 0,
         precioOferta:
           form.precioOferta && form.precioOferta > 0
             ? Number(form.precioOferta)
-            : undefined,
+            : null,
         stock: Number(form.stock || 0),
         visible: form.estado === "publicado" || form.estado === "agotado",
         fechaActualizacion: new Date().toISOString(),
-        creadoPor: product ? form.creadoPor : user?.id,
-        actualizadoPor: user?.id,
+        creadoPor: product ? form.creadoPor || null : user?.id || null,
+        actualizadoPor: user?.id || null,
       } as Product;
+
+      // Firestore rejects undefined values — strip them
+      Object.keys(payload).forEach((key) => {
+        if ((payload as any)[key] === undefined) {
+          (payload as any)[key] = null;
+        }
+      });
 
       if (product) {
         await updateProduct(product.id, payload);
