@@ -69,16 +69,19 @@ export function QuoteForm({ open, onClose, onQuoteCreated }: QuoteFormProps) {
             className="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm"
           />
           <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed inset-y-0 right-0 z-[60] w-full max-w-lg bg-white shadow-2xl"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: "spring", damping: 28, stiffness: 350 }}
+            className="fixed inset-4 z-[60] mx-auto flex max-h-[92vh] max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:inset-8 md:inset-y-12"
           >
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <h2 className="text-lg font-semibold">Crear cotización</h2>
-                <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-muted">
+                <button
+                  onClick={onClose}
+                  className="rounded-full p-2 transition-colors hover:bg-muted"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -95,42 +98,56 @@ export function QuoteForm({ open, onClose, onQuoteCreated }: QuoteFormProps) {
                   <Input
                     label="Nombre del cliente"
                     value={client.nombre}
-                    onChange={(e) => setClient({ ...client, nombre: e.target.value })}
+                    onChange={(e) =>
+                      setClient({ ...client, nombre: e.target.value })
+                    }
                     placeholder="Ej. Juan Pérez"
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       label="Teléfono"
                       value={client.telefono}
-                      onChange={(e) => setClient({ ...client, telefono: e.target.value })}
+                      onChange={(e) =>
+                        setClient({ ...client, telefono: e.target.value })
+                      }
                       placeholder="Ej. 809-000-0000"
                     />
                     <Input
                       label="Correo"
                       type="email"
                       value={client.correo}
-                      onChange={(e) => setClient({ ...client, correo: e.target.value })}
+                      onChange={(e) =>
+                        setClient({ ...client, correo: e.target.value })
+                      }
                       placeholder="Ej. cliente@email.com"
                     />
                   </div>
                   <Input
                     label="Empresa"
                     value={client.empresa}
-                    onChange={(e) => setClient({ ...client, empresa: e.target.value })}
+                    onChange={(e) =>
+                      setClient({ ...client, empresa: e.target.value })
+                    }
                     placeholder="Opcional"
                   />
                   <Input
                     label="Notas"
                     value={client.notas}
-                    onChange={(e) => setClient({ ...client, notas: e.target.value })}
+                    onChange={(e) =>
+                      setClient({ ...client, notas: e.target.value })
+                    }
                     placeholder="Observaciones adicionales"
                   />
 
                   <div className="rounded-2xl bg-muted/50 p-4">
-                    <h4 className="text-sm font-semibold text-foreground">Resumen</h4>
+                    <h4 className="text-sm font-semibold text-foreground">
+                      Resumen
+                    </h4>
                     <div className="mt-2 flex items-center justify-between text-base">
                       <span className="text-muted-foreground">Productos</span>
-                      <span className="font-medium text-foreground">{items.reduce((s, i) => s + i.cantidad, 0)}</span>
+                      <span className="font-medium text-foreground">
+                        {items.reduce((s, i) => s + i.cantidad, 0)}
+                      </span>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-lg font-bold text-foreground">
                       <span>Total</span>
@@ -140,8 +157,16 @@ export function QuoteForm({ open, onClose, onQuoteCreated }: QuoteFormProps) {
                 </div>
 
                 <div className="border-t border-border p-6">
-                  <Button type="submit" size="lg" className="w-full" loading={loading} disabled={items.length === 0}>
-                    {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="w-full"
+                    loading={loading}
+                    disabled={items.length === 0}
+                  >
+                    {loading ? (
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    ) : null}
                     Generar cotización
                   </Button>
                 </div>

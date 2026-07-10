@@ -15,6 +15,7 @@ import {
   Trash2,
   Edit,
   Copy,
+  FileText,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
@@ -25,6 +26,7 @@ import AdminCategories from "@/components/admin/AdminCategories";
 import AdminBrands from "@/components/admin/AdminBrands";
 import AdminTeam from "@/components/admin/AdminTeam";
 import AdminSettings from "@/components/admin/AdminSettings";
+import AdminQuotes from "@/components/admin/AdminQuotes";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { deleteProduct } from "@/lib/products";
@@ -57,6 +59,14 @@ export default function AdminPage() {
         hasPermission("marcas", "crear") ||
         hasPermission("marcas", "editar") ||
         hasPermission("marcas", "eliminar"),
+    },
+    {
+      id: "cotizaciones",
+      label: "Cotizaciones",
+      icon: FileText,
+      visible:
+        hasPermission("cotizaciones", "verTodas") ||
+        user?.rol === "administrador",
     },
     {
       id: "equipo",
@@ -324,6 +334,7 @@ export default function AdminPage() {
 
           {activeTab === "categorias" && <AdminCategories />}
           {activeTab === "marcas" && <AdminBrands />}
+          {activeTab === "cotizaciones" && <AdminQuotes />}
           {activeTab === "equipo" && <AdminTeam />}
           {activeTab === "configuracion" && <AdminSettings />}
         </div>
@@ -346,14 +357,14 @@ export default function AdminPage() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setProductFormOpen(false)}
-              className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm"
+              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
             />
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-hidden bg-white shadow-2xl"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", damping: 28, stiffness: 350 }}
+              className="fixed inset-4 z-50 mx-auto flex max-h-[94vh] max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:inset-6 md:inset-10"
             >
               <ProductForm
                 product={editingProduct}

@@ -61,129 +61,147 @@ export default function QuotePage() {
   }
 
   return (
-    <main className="min-h-screen bg-white p-4 py-8 sm:p-8">
-      <div className="mx-auto max-w-3xl rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-10">
-        <header className="flex flex-col items-start justify-between gap-4 border-b border-border pb-6 sm:flex-row sm:items-center">
-          <div className="flex items-center gap-4">
-            <Logo variant="horizontal" height={42} />
-            <div>
-              <h1 className="text-xl font-bold text-foreground">
-                {settings.empresa.nombre}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                {settings.empresa.descripcion}
-              </p>
-            </div>
-          </div>
-          <div className="text-left sm:text-right">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              Cotización
-            </p>
-            <p className="text-lg font-bold text-primary">{quote.codigo}</p>
-            <p className="text-sm text-muted-foreground">
-              {new Date(quote.fechaCreacion).toLocaleDateString("es-DO")}
-            </p>
-          </div>
-        </header>
-
-        {quote.cliente.nombre && (
-          <section className="mt-6">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Cliente
-            </h2>
-            <p className="mt-1 text-base text-foreground">
-              {quote.cliente.nombre}
-            </p>
-            {quote.cliente.empresa && (
-              <p className="text-sm text-muted-foreground">
-                {quote.cliente.empresa}
-              </p>
-            )}
-            {quote.cliente.telefono && (
-              <p className="text-sm text-muted-foreground">
-                {quote.cliente.telefono}
-              </p>
-            )}
-            {quote.cliente.correo && (
-              <p className="text-sm text-muted-foreground">
-                {quote.cliente.correo}
-              </p>
-            )}
-          </section>
-        )}
-
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Productos
-          </h2>
-          <div className="mt-4 space-y-4">
-            {quote.productos.map((p, idx) => (
-              <div
-                key={idx}
-                className="flex gap-4 rounded-2xl border border-border p-3"
-              >
-                <img
-                  src={p.imagen || "/placeholder-product.svg"}
-                  alt={p.nombre}
-                  className="h-20 w-20 rounded-xl object-cover"
-                />
-                <div className="flex flex-1 flex-col justify-center">
-                  <h3 className="font-semibold text-foreground">{p.nombre}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Cantidad: {p.cantidad}
-                  </p>
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white px-4 py-8 sm:px-8 sm:py-12">
+      <div className="mx-auto max-w-3xl">
+        {/* Header card */}
+        <div className="overflow-hidden rounded-t-3xl bg-white shadow-sm">
+          <div className="bg-gradient-to-r from-primary to-primary/80 px-6 py-8 sm:px-10">
+            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-4">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                  <Logo variant="isotype" height={32} />
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-foreground">
-                    {formatCurrency(p.precio)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatCurrency(p.subtotal)}
+                <div>
+                  <h1 className="text-xl font-bold text-white">
+                    {settings.empresa.nombre}
+                  </h1>
+                  <p className="text-sm text-white/70">
+                    {settings.empresa.descripcion}
                   </p>
                 </div>
               </div>
-            ))}
+              <div className="text-left sm:text-right">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/50">
+                  Cotización
+                </p>
+                <p className="text-2xl font-bold tracking-tight text-white">
+                  {quote.codigo}
+                </p>
+                <p className="mt-0.5 text-sm text-white/70">
+                  {new Date(quote.fechaCreacion).toLocaleDateString("es-DO", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
 
-        <section className="mt-8 border-t border-border pt-6">
-          <div className="flex items-center justify-between text-base">
-            <span className="text-muted-foreground">Subtotal</span>
-            <span className="font-semibold text-foreground">
-              {formatCurrency(quote.subtotal)}
-            </span>
-          </div>
-          <div className="mt-2 flex items-center justify-between text-2xl font-bold text-foreground">
-            <span>Total</span>
-            <span>{formatCurrency(quote.total)}</span>
-          </div>
-        </section>
+        {/* Body */}
+        <div className="rounded-b-3xl border border-t-0 border-border bg-white px-6 pb-8 pt-6 shadow-sm sm:px-10">
+          {/* Client info */}
+          {quote.cliente.nombre && (
+            <section className="mb-8 rounded-2xl border border-border/60 bg-gray-50/50 p-5">
+              <h2 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Datos del cliente
+              </h2>
+              <p className="text-base font-semibold text-foreground">
+                {quote.cliente.nombre}
+              </p>
+              <div className="mt-1 space-y-0.5 text-sm text-muted-foreground">
+                {quote.cliente.empresa && <p>{quote.cliente.empresa}</p>}
+                {quote.cliente.telefono && <p>{quote.cliente.telefono}</p>}
+                {quote.cliente.correo && <p>{quote.cliente.correo}</p>}
+              </div>
+            </section>
+          )}
 
-        {quote.observaciones && (
-          <section className="mt-6 rounded-2xl bg-muted/50 p-4">
-            <h3 className="text-sm font-semibold text-foreground">
-              Observaciones
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {quote.observaciones}
-            </p>
+          {/* Products */}
+          <section>
+            <h2 className="mb-4 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Productos ({quote.productos.length})
+            </h2>
+            <div className="space-y-3">
+              {quote.productos.map((p, idx) => (
+                <div
+                  key={idx}
+                  className="flex items-center gap-4 rounded-2xl border border-border/60 bg-white p-3 transition-colors hover:bg-gray-50/50"
+                >
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-50">
+                    <img
+                      src={p.imagen || "/placeholder-product.svg"}
+                      alt={p.nombre}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      {p.nombre}
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      {formatCurrency(p.precio)} × {p.cantidad}
+                    </p>
+                  </div>
+                  <p className="text-sm font-bold text-foreground">
+                    {formatCurrency(p.subtotal)}
+                  </p>
+                </div>
+              ))}
+            </div>
           </section>
-        )}
 
-        <footer className="mt-8 border-t border-border pt-6 text-center text-sm text-muted-foreground">
-          <p>{settings.empresa.direccion}</p>
-          <p>
-            {settings.empresa.telefono} · {settings.empresa.correo}
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={handleShare}
-          >
-            <Share2 className="mr-2 h-4 w-4" /> Compartir cotización
-          </Button>
-        </footer>
+          {/* Totals */}
+          <section className="mt-8 border-t border-border pt-6">
+            <div className="flex items-center justify-between py-1.5 text-sm">
+              <span className="text-muted-foreground">Subtotal</span>
+              <span className="font-medium text-foreground">
+                {formatCurrency(quote.subtotal)}
+              </span>
+            </div>
+            <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
+              <span className="text-lg font-bold text-foreground">Total</span>
+              <span className="text-2xl font-bold text-primary">
+                {formatCurrency(quote.total)}
+              </span>
+            </div>
+          </section>
+
+          {/* Notes */}
+          {quote.observaciones && (
+            <section className="mt-6 rounded-2xl bg-amber-50/60 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wide text-amber-700">
+                Observaciones
+              </h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-amber-900/80">
+                {quote.observaciones}
+              </p>
+            </section>
+          )}
+
+          {/* Footer */}
+          <footer className="mt-8 border-t border-border pt-6">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+              <div className="text-center text-xs text-muted-foreground sm:text-left">
+                <p className="font-medium text-foreground">
+                  {settings.empresa.nombre}
+                </p>
+                {settings.empresa.direccion && (
+                  <p>{settings.empresa.direccion}</p>
+                )}
+                <p>
+                  {[settings.empresa.telefono, settings.empresa.correo]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleShare}>
+                <Share2 className="mr-2 h-4 w-4" /> Compartir
+              </Button>
+            </div>
+          </footer>
+        </div>
       </div>
     </main>
   );
