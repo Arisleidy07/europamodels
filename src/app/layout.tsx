@@ -33,8 +33,8 @@ export default function RootLayout({
   return (
     <html lang="es" className={inter.variable}>
       <head>
-        <link rel="icon" type="image/png" href="/icons/europa.PNG" />
-        <link rel="apple-touch-icon" href="/icons/europa.PNG" />
+        <link rel="icon" type="image/jpeg" href="/icons/3d-europa.JPG" />
+        <link rel="apple-touch-icon" href="/icons/3d-europa.JPG" />
       </head>
       <body className="antialiased">
         <SettingsProvider>
