@@ -3,20 +3,16 @@
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, User, LayoutDashboard } from "lucide-react";
+import { ArrowRight, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { LicenseGuard } from "@/components/LicenseGuard";
 
-const DEFAULT_VIDEOS = [
-  "/videos/perfume1.mov",
-  "/videos/perfume2.mov",
-  "/videos/perfume3.mov",
-];
+const DEFAULT_VIDEOS = ["/videos/perfume1.mov", "/videos/perfume3.mov"];
 
 export default function HomePage() {
   const { settings } = useSettings();
-  const { user, hasPermission } = useAuth();
+  const { user } = useAuth();
 
   const videos: string[] =
     settings.inicio.videos && settings.inicio.videos.length > 0
@@ -24,11 +20,6 @@ export default function HomePage() {
       : settings.inicio.videoInicio
         ? [settings.inicio.videoInicio]
         : DEFAULT_VIDEOS;
-
-  const isAdmin =
-    user?.rol === "administrador" ||
-    hasPermission("productos", "crear") ||
-    hasPermission("categorias", "crear");
   const [current, setCurrent] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -71,23 +62,13 @@ export default function HomePage() {
             alt="Europa Models"
             className="h-12 w-auto drop-shadow-lg"
           />
-          <div className="flex items-center gap-3">
-            {isAdmin && (
-              <Link
-                href="/administracion"
-                className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
-              >
-                <LayoutDashboard className="h-4 w-4" /> Admin
-              </Link>
-            )}
-            <Link
-              href={user ? "/perfil" : "/login"}
-              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
-            >
-              <User className="h-4 w-4" />
-              {user ? user.nombre : "Iniciar sesión"}
-            </Link>
-          </div>
+          <Link
+            href={user ? "/perfil" : "/login"}
+            className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-sm font-medium backdrop-blur-md transition-colors hover:bg-white/20"
+          >
+            <User className="h-4 w-4" />
+            {user ? user.nombre : "Iniciar sesión"}
+          </Link>
         </div>
 
         {/* Content */}

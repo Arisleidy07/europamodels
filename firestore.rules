@@ -1,97 +1,71 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function isAuthenticated() {
+
+    function isAuth() {
       return request.auth != null;
     }
 
-    function getUserData() {
+    function userData() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isActiveUser() {
-      return isAuthenticated() && getUserData().activo == true;
-    }
-
     function isAdmin() {
-      return isActiveUser() && (
-        getUserData().isSuperAdmin == true ||
-        getUserData().rol == 'administrador'
-      );
+      let u = userData();
+      return u.activo == true && (u.isSuperAdmin == true || u.rol == 'administrador');
     }
 
-    function hasPermission(module, action) {
-      return isAdmin() || (
-        isActiveUser() &&
-        module in getUserData().permisos &&
-        action in getUserData().permisos[module] &&
-        getUserData().permisos[module][action] == true
-      );
-    }
-
-    function canManageUsers() {
-      return isActiveUser() && (
-        isAdmin() ||
-        getUserData().permisos.usuarios.invitar == true
-      );
-    }
-
+    // Users: read own or if admin; write own profile or if admin
     match /users/{userId} {
-      allow read: if isActiveUser() && (canManageUsers() || request.auth.uid == userId);
-      allow update: if isActiveUser() && (
-        request.auth.uid == userId ||
-        isAdmin() ||
-        (!resource.data.isSuperAdmin && canManageUsers())
-      );
-      allow create: if canManageUsers();
-      allow delete: if isActiveUser() && !resource.data.isSuperAdmin && (isAdmin() || canManageUsers());
+      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuth() && isAdmin();
+      allow update: if isAuth() && (request.auth.uid == userId || isAdmin());
+      allow delete: if isAuth() && isAdmin();
     }
 
-    match /products/{productId} {
+    // Products, categories, brands, subcategories: public read, admin write
+    match /products/{docId} {
       allow read: if true;
-      allow create: if hasPermission('productos', 'crear');
-      allow update: if hasPermission('productos', 'editar');
-      allow delete: if hasPermission('productos', 'eliminar');
+      allow create, update, delete: if isAuth() && isAdmin();
     }
 
-    match /categories/{categoryId} {
+    match /categories/{docId} {
       allow read: if true;
-      allow create: if hasPermission('categorias', 'crear');
-      allow update: if hasPermission('categorias', 'editar');
-      allow delete: if hasPermission('categorias', 'eliminar');
+      allow create, update, delete: if isAuth() && isAdmin();
     }
 
-    match /subcategories/{subcategoryId} {
+    match /subcategories/{docId} {
       allow read: if true;
-      allow create, update, delete: if hasPermission('categorias', 'crear');
+      allow create, update, delete: if isAuth() && isAdmin();
     }
 
-    match /brands/{brandId} {
+    match /brands/{docId} {
       allow read: if true;
-      allow create: if hasPermission('marcas', 'crear');
-      allow update: if hasPermission('marcas', 'editar');
-      allow delete: if hasPermission('marcas', 'eliminar');
+      allow create, update, delete: if isAuth() && isAdmin();
     }
 
-    match /quotes/{quoteId} {
+    // Quotes: public read, authenticated create, admin manage
+    match /quotes/{docId} {
       allow read: if true;
-      allow create: if hasPermission('cotizaciones', 'crear');
-      allow update, delete: if hasPermission('cotizaciones', 'verTodas');
+      allow create: if isAuth();
+      allow update, delete: if isAuth() && isAdmin();
     }
 
+    // Settings: public read, admin write
     match /settings/{document=**} {
       allow read: if true;
-      allow write: if isAdmin() || hasPermission('configuracion', 'editar');
+      allow write: if isAuth() && isAdmin();
     }
 
-    match /invitations/{invitationId} {
-      allow read: if isAuthenticated();
-      allow write: if canManageUsers();
+    // Invitations
+    match /invitations/{docId} {
+      allow read: if isAuth();
+      allow write: if isAuth() && isAdmin();
     }
 
-    match /activityLogs/{logId} {
-      allow read: if isActiveUser();
-      allow create: if isActiveUser();
+    // Activity logs
+    match /activityLogs/{docId} {
+      allow read, create: if isAuth();
     }
   }
 }

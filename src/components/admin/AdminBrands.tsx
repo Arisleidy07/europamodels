@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { createBrand, updateBrand, deleteBrand } from "@/lib/categories";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ export default function AdminBrands() {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Brand | null>(null);
 
   const handleSave = async () => {
     const target = editing;
@@ -63,13 +65,15 @@ export default function AdminBrands() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta marca?")) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteBrand(id);
+      await deleteBrand(deleteTarget.id);
       toast.success("Marca eliminada");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -220,7 +224,7 @@ export default function AdminBrands() {
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(brand.id)}
+                        onClick={() => setDeleteTarget(brand)}
                         className="rounded-lg p-2 text-danger hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -233,6 +237,14 @@ export default function AdminBrands() {
           </tbody>
         </table>
       </div>
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Eliminar marca"
+        message={`¿Deseas eliminar la marca "${deleteTarget?.nombre}"?`}
+        confirmLabel="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

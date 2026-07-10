@@ -19,6 +19,7 @@ import {
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { ProductForm } from "@/components/admin/ProductForm";
 import AdminCategories from "@/components/admin/AdminCategories";
 import AdminBrands from "@/components/admin/AdminBrands";
@@ -88,6 +89,7 @@ export default function AdminPage() {
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
 
   if (!user) {
     return (
@@ -119,13 +121,15 @@ export default function AdminPage() {
     );
   });
 
-  const handleDelete = async (product: Product) => {
-    if (!confirm(`¿Eliminar "${product.nombre}"?`)) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteProduct(product.id);
+      await deleteProduct(deleteTarget.id);
       toast.success("Producto eliminado");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -297,7 +301,7 @@ export default function AdminPage() {
                                   {canDeleteProducts && (
                                     <button
                                       onClick={() => {
-                                        handleDelete(product);
+                                        setDeleteTarget(product);
                                         setMenuOpen(null);
                                       }}
                                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-red-50"
@@ -324,6 +328,15 @@ export default function AdminPage() {
           {activeTab === "configuracion" && <AdminSettings />}
         </div>
       </main>
+
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Eliminar producto"
+        message={`¿Deseas eliminar "${deleteTarget?.nombre}"? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
 
       <AnimatePresence>
         {productFormOpen && (

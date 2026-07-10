@@ -1,9 +1,16 @@
 "use client";
 
-import React, { useState, useRef, useMemo } from "react";
+import React, {
+  useState,
+  useRef,
+  useMemo,
+  useEffect,
+  useCallback,
+} from "react";
 import { X, Upload, Trash2, Star, ArrowUp, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   createProduct,
   updateProduct,
@@ -67,13 +74,24 @@ function QuickManageModal({
     }
   };
 
+  const [confirmTarget, setConfirmTarget] = React.useState<{
+    id: string;
+    nombre: string;
+  } | null>(null);
+
   const handleDelete = async (id: string, nombre: string) => {
-    if (!confirm(`¿Eliminar "${nombre}"?`)) return;
+    setConfirmTarget({ id, nombre });
+  };
+
+  const executeDelete = async () => {
+    if (!confirmTarget) return;
     try {
-      await onDelete(id);
-      toast.success(`"${nombre}" eliminado`);
+      await onDelete(confirmTarget.id);
+      toast.success(`"${confirmTarget.nombre}" eliminado`);
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
+    } finally {
+      setConfirmTarget(null);
     }
   };
 
@@ -179,6 +197,15 @@ function QuickManageModal({
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={!!confirmTarget}
+        title="Confirmar eliminación"
+        message={`¿Estás seguro de que deseas eliminar "${confirmTarget?.nombre}"?`}
+        confirmLabel="Eliminar"
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmTarget(null)}
+      />
     </div>
   );
 }
@@ -217,6 +244,30 @@ const initialProduct: Partial<Product> = {
   nuevo: false,
 };
 
+const DRAFT_KEY = "europa_product_draft";
+
+function loadDraft(): Partial<Product> | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(data: Partial<Product>) {
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+  } catch {}
+}
+
+function clearDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+  } catch {}
+}
+
 export function ProductForm({
   product,
   categories,
@@ -226,9 +277,31 @@ export function ProductForm({
   onSaved,
 }: ProductFormProps) {
   const { user } = useAuth();
-  const [form, setForm] = useState<Partial<Product>>(
-    product ? { ...initialProduct, ...product } : { ...initialProduct },
-  );
+  const [draftRestored, setDraftRestored] = useState(false);
+  const [showDraftPrompt, setShowDraftPrompt] = useState(false);
+
+  const getInitialForm = useCallback((): Partial<Product> => {
+    if (product) return { ...initialProduct, ...product };
+    const draft = loadDraft();
+    if (draft && draft.nombre) {
+      setShowDraftPrompt(true);
+      return draft;
+    }
+    return { ...initialProduct };
+  }, [product]);
+
+  const [form, setForm] = useState<Partial<Product>>(getInitialForm);
+
+  // Auto-save draft every 3 seconds for new products
+  useEffect(() => {
+    if (product) return; // don't draft edits
+    const timer = setInterval(() => {
+      if (form.nombre || form.categoriaId || form.marcaId) {
+        saveDraft(form);
+      }
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [form, product]);
 
   const initialImages = useMemo<ImageItem[]>(() => {
     return (product?.imagenes || []).map((url, i) => ({
@@ -377,6 +450,7 @@ export function ProductForm({
       } else {
         await createProduct(payload);
         toast.success("Producto creado");
+        clearDraft();
       }
       onSaved();
       onClose();
@@ -402,6 +476,24 @@ export function ProductForm({
       </div>
 
       <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6">
+        {showDraftPrompt && !product && (
+          <div className="mb-4 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <span className="text-sm font-medium text-amber-800">
+              Se restauró un borrador pendiente
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                clearDraft();
+                setForm({ ...initialProduct });
+                setShowDraftPrompt(false);
+              }}
+              className="text-xs font-medium text-amber-700 underline hover:text-amber-900"
+            >
+              Descartar
+            </button>
+          </div>
+        )}
         <div className="space-y-8">
           <section>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
@@ -542,9 +634,14 @@ export function ProductForm({
                 type="number"
                 min={0}
                 step="0.01"
-                value={form.precio}
+                placeholder="0.00"
+                value={form.precio || ""}
                 onChange={(e) =>
-                  setForm({ ...form, precio: parseFloat(e.target.value) || 0 })
+                  setForm({
+                    ...form,
+                    precio:
+                      e.target.value === "" ? 0 : parseFloat(e.target.value),
+                  })
                 }
                 required
               />
@@ -553,11 +650,15 @@ export function ProductForm({
                 type="number"
                 min={0}
                 step="0.01"
+                placeholder="0.00"
                 value={form.precioOferta || ""}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    precioOferta: parseFloat(e.target.value) || undefined,
+                    precioOferta:
+                      e.target.value === ""
+                        ? undefined
+                        : parseFloat(e.target.value),
                   })
                 }
               />
@@ -565,9 +666,13 @@ export function ProductForm({
                 label="Stock"
                 type="number"
                 min={0}
-                value={form.stock}
+                placeholder="0"
+                value={form.stock || ""}
                 onChange={(e) =>
-                  setForm({ ...form, stock: parseInt(e.target.value) || 0 })
+                  setForm({
+                    ...form,
+                    stock: e.target.value === "" ? 0 : parseInt(e.target.value),
+                  })
                 }
               />
             </div>

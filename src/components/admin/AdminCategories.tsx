@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import {
   createCategory,
@@ -38,6 +39,7 @@ export default function AdminCategories() {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
   const [saving, setSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const handleSave = async () => {
     const target = editing;
@@ -67,13 +69,15 @@ export default function AdminCategories() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar esta categoría?")) return;
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteCategory(id);
+      await deleteCategory(deleteTarget.id);
       toast.success("Categoría eliminada");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -222,7 +226,7 @@ export default function AdminCategories() {
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(cat.id)}
+                        onClick={() => setDeleteTarget(cat)}
                         className="rounded-lg p-2 text-danger hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -235,6 +239,14 @@ export default function AdminCategories() {
           </tbody>
         </table>
       </div>
+      <ConfirmModal
+        open={!!deleteTarget}
+        title="Eliminar categoría"
+        message={`¿Deseas eliminar la categoría "${deleteTarget?.nombre}"?`}
+        confirmLabel="Eliminar"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

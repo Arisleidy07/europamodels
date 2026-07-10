@@ -2,49 +2,28 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function getUserData() {
-      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isActiveUser() {
-      let user = getUserData();
-      return user.activo == true;
-    }
-
-    function isActiveAdmin() {
-      let user = getUserData();
-      return user.activo == true && (
-        user.isSuperAdmin == true ||
-        user.rol == 'administrador'
-      );
-    }
-
-    // Product images — any active authenticated user (permissions checked in app)
+    // Product images — authenticated users (permissions enforced in app + Firestore rules)
     match /products/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isActiveUser();
+      allow write: if request.auth != null;
     }
 
-    // Videos for home screen — only admins
+    // Videos for home screen — authenticated users (admin check in app)
     match /videos/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isActiveAdmin();
+      allow write: if request.auth != null;
     }
 
-    // Company logos — only admins
+    // Company logos — authenticated users (admin check in app)
     match /logos/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && isActiveAdmin();
+      allow write: if request.auth != null;
     }
 
     // Profile photos — users can upload their own
     match /profiles/{userId}/{allPaths=**} {
       allow read: if true;
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
     }
 
     // Default deny

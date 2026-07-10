@@ -27,7 +27,8 @@ export async function updateCategory(
 ): Promise<void> {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
-  await updateDoc(doc(db, "categories", id), data);
+  const { id: _id, ...rest } = data as any;
+  await updateDoc(doc(db, "categories", id), rest);
 }
 
 export async function deleteCategory(id: string): Promise<void> {
@@ -73,7 +74,8 @@ export async function updateBrand(
 ): Promise<void> {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
-  await updateDoc(doc(db, "brands", id), data);
+  const { id: _id, ...rest } = data as any;
+  await updateDoc(doc(db, "brands", id), rest);
 }
 
 export async function deleteBrand(id: string): Promise<void> {
