@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft,
   Save,
   LogOut,
   Mail,
@@ -101,17 +100,10 @@ export default function ProfilePage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Header search="" showMenu={false} />
+      <Header />
 
       <main className="flex-1 px-4 py-8 lg:px-8">
         <div className="mx-auto max-w-3xl">
-          <button
-            onClick={() => router.push("/")}
-            className="mb-6 flex items-center gap-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-4 w-4" /> Volver al inicio
-          </button>
-
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

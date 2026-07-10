@@ -10,11 +10,118 @@ import {
   uploadProductImages,
   deleteProductImage,
 } from "@/lib/products";
+import { createCategory } from "@/lib/categories";
+import { createBrand } from "@/lib/categories";
 import { useAuth } from "@/context/AuthContext";
-import { generateId } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { generateId, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { Product, Category, Subcategory, Brand } from "@/types";
+
+const PRESET_COLORS = [
+  "#2563eb",
+  "#7c3aed",
+  "#db2777",
+  "#ea580c",
+  "#16a34a",
+  "#0891b7",
+  "#4f46e5",
+  "#be123c",
+];
+
+function QuickCreateModal({
+  title,
+  open,
+  onClose,
+  onCreated,
+}: {
+  title: string;
+  open: boolean;
+  onClose: () => void;
+  onCreated: (name: string, color: string) => Promise<void>;
+}) {
+  const [name, setName] = React.useState("");
+  const [color, setColor] = React.useState(PRESET_COLORS[0]);
+  const [saving, setSaving] = React.useState(false);
+
+  if (!open) return null;
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return;
+    setSaving(true);
+    try {
+      await onCreated(name.trim(), color);
+      setName("");
+      setColor(PRESET_COLORS[0]);
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Error al crear");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+        <h3 className="mb-4 text-lg font-semibold">{title}</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Nombre
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              placeholder={`Nombre de la ${title.toLowerCase().replace("nueva ", "")}`}
+              autoFocus
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Color
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {PRESET_COLORS.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => setColor(c)}
+                  className={cn(
+                    "h-8 w-8 rounded-full border-2 transition-all",
+                    color === c
+                      ? "border-foreground scale-110"
+                      : "border-transparent",
+                  )}
+                  style={{ backgroundColor: c }}
+                />
+              ))}
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving || !name.trim()}
+              className="rounded-xl bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:opacity-50"
+            >
+              {saving ? "Creando..." : "Crear"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface ProductFormProps {
   product?: Product | null;
@@ -75,6 +182,8 @@ export function ProductForm({
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [dragging, setDragging] = useState<string | null>(null);
+  const [showNewCategory, setShowNewCategory] = useState(false);
+  const [showNewBrand, setShowNewBrand] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const filteredSubcategories = subcategories.filter(
@@ -285,6 +394,13 @@ export function ProductForm({
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  onClick={() => setShowNewBrand(true)}
+                  className="mt-1.5 text-xs font-medium text-primary hover:underline"
+                >
+                  + Nueva marca
+                </button>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -309,6 +425,13 @@ export function ProductForm({
                     </option>
                   ))}
                 </select>
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategory(true)}
+                  className="mt-1.5 text-xs font-medium text-primary hover:underline"
+                >
+                  + Nueva categoría
+                </button>
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -566,6 +689,38 @@ export function ProductForm({
           {product ? "Guardar cambios" : "Crear producto"}
         </Button>
       </div>
+
+      <QuickCreateModal
+        title="Nueva categoría"
+        open={showNewCategory}
+        onClose={() => setShowNewCategory(false)}
+        onCreated={async (name, color) => {
+          const created = await createCategory({
+            nombre: name,
+            color,
+            orden: categories.length + 1,
+            activo: true,
+          });
+          setForm((prev) => ({ ...prev, categoriaId: created.id }));
+          toast.success("Categoría creada");
+        }}
+      />
+
+      <QuickCreateModal
+        title="Nueva marca"
+        open={showNewBrand}
+        onClose={() => setShowNewBrand(false)}
+        onCreated={async (name, color) => {
+          const created = await createBrand({
+            nombre: name,
+            color,
+            orden: brands.length + 1,
+            activo: true,
+          });
+          setForm((prev) => ({ ...prev, marcaId: created.id }));
+          toast.success("Marca creada");
+        }}
+      />
     </div>
   );
 }

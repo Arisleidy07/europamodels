@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -10,14 +9,12 @@ import {
   Tag,
   Users,
   Settings,
-  LogOut,
   Plus,
   Search,
   MoreVertical,
   Trash2,
   Edit,
   Copy,
-  Loader2,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
@@ -29,18 +26,16 @@ import AdminTeam from "@/components/admin/AdminTeam";
 import AdminSettings from "@/components/admin/AdminSettings";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
-import { useSettings } from "@/context/SettingsContext";
 import { deleteProduct } from "@/lib/products";
-import { normalizeText, formatCurrency } from "@/lib/utils";
+import { normalizeText, formatCurrency, cn } from "@/lib/utils";
 import toast from "react-hot-toast";
-import type { Product, Category, Subcategory, Brand } from "@/types";
+import type { Product } from "@/types";
 
 export default function AdminPage() {
   const router = useRouter();
-  const { user, logout, hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const { products, categories, subcategories, brands, loading } =
     useCatalogData();
-  const { settings } = useSettings();
 
   const tabs = [
     { id: "productos", label: "Productos", icon: Package, visible: true },
@@ -134,78 +129,38 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogout = async () => {
-    await logout();
-    router.push("/");
-  };
-
   return (
     <div className="flex min-h-screen flex-col bg-background">
-      <Header search="" showMenu={false} />
+      <Header />
 
-      <div className="border-b border-border bg-white px-4 py-3 lg:hidden">
-        <select
-          value={activeTab}
-          onChange={(e) => setActiveTab(e.target.value)}
-          className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-primary"
-        >
-          {tabs.map((tab) => (
-            <option key={tab.id} value={tab.id}>
-              {tab.label}
-            </option>
-          ))}
-        </select>
+      {/* Admin tab bar */}
+      <div className="border-b border-border bg-white">
+        <div className="flex items-center gap-1 overflow-x-auto px-4 lg:px-8">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  "flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+                  active
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="hidden w-64 flex-col border-r border-border bg-white lg:flex">
-          <div className="p-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-sm font-bold text-white">
-                {user.nombre.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <p className="font-semibold text-foreground">{user.nombre}</p>
-                <p className="text-xs text-muted-foreground">
-                  {user.cargo || user.rol}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <nav className="flex-1 space-y-1 px-4">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-
-          <div className="border-t border-border p-4">
-            <button
-              onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <LogOut className="h-4 w-4" /> Cerrar sesión
-            </button>
-          </div>
-        </aside>
-
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+      {/* Main content */}
+      <main className="flex-1 px-4 py-6 lg:px-8">
+        <div className="mx-auto max-w-6xl">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl font-bold text-foreground">
               {tabs.find((t) => t.id === activeTab)?.label}
@@ -244,7 +199,7 @@ export default function AdminPage() {
                   ))}
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-border bg-white">
+                <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-muted/50 text-muted-foreground">
                       <tr>
@@ -291,13 +246,14 @@ export default function AdminPage() {
                           </td>
                           <td className="px-4 py-3">
                             <span
-                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              className={cn(
+                                "rounded-full px-2.5 py-1 text-xs font-medium",
                                 product.estado === "publicado"
                                   ? "bg-green-50 text-success"
                                   : product.estado === "agotado"
                                     ? "bg-red-50 text-danger"
-                                    : "bg-gray-100 text-muted-foreground"
-                              }`}
+                                    : "bg-gray-100 text-muted-foreground",
+                              )}
                             >
                               {product.estado}
                             </span>
@@ -363,14 +319,11 @@ export default function AdminPage() {
           )}
 
           {activeTab === "categorias" && <AdminCategories />}
-
           {activeTab === "marcas" && <AdminBrands />}
-
           {activeTab === "equipo" && <AdminTeam />}
-
           {activeTab === "configuracion" && <AdminSettings />}
-        </main>
-      </div>
+        </div>
+      </main>
 
       <AnimatePresence>
         {productFormOpen && (
@@ -387,7 +340,7 @@ export default function AdminPage() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl bg-white shadow-2xl"
+              className="fixed inset-y-0 right-0 z-50 w-full max-w-2xl overflow-hidden bg-white shadow-2xl"
             >
               <ProductForm
                 product={editingProduct}

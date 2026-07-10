@@ -124,7 +124,6 @@ export default function CatalogoPage() {
           search={search}
           onSearchChange={setSearch}
           onOpenCart={() => setCartOpen(true)}
-          showMenu={false}
         />
 
         <div className="border-b border-border bg-white px-4 py-3 lg:px-8">
