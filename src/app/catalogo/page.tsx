@@ -21,6 +21,7 @@ import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { useCatalogData } from "@/hooks/useCatalogData";
+import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { useCart } from "@/context/CartContext";
 import { useSettings } from "@/context/SettingsContext";
 import { normalizeText, formatCurrency, cn } from "@/lib/utils";
@@ -269,6 +270,7 @@ export default function CatalogoPage() {
     useCatalogData();
   const { addToCart } = useCart();
   const { settings } = useSettings();
+  useSyncQueue();
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");

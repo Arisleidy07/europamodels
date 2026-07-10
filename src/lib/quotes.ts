@@ -5,6 +5,7 @@ import {
   query,
   orderBy,
   limit,
+  where,
   setDoc,
   serverTimestamp,
 } from "firebase/firestore";
@@ -129,5 +130,20 @@ export async function getQuoteByCode(code: string): Promise<Quote | null> {
     (q) => q.codigo.toLowerCase() === code.toLowerCase(),
   );
   if (found) return found;
+
+  // Fallback: query Firestore
+  const firestore = getFirebaseDb();
+  if (!firestore) return null;
+  try {
+    const q = query(
+      collection(firestore, "quotes"),
+      where("codigo", "==", code.toUpperCase()),
+      limit(1),
+    );
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return { id: snap.docs[0].id, ...snap.docs[0].data() } as Quote;
+    }
+  } catch {}
   return null;
 }
