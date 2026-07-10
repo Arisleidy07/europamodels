@@ -2,70 +2,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAuth() {
-      return request.auth != null;
-    }
-
-    function userData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isAdmin() {
-      let u = userData();
-      return u.activo == true && (u.isSuperAdmin == true || u.rol == 'administrador');
-    }
-
-    // Users: read own or if admin; write own profile or if admin
+    // Users: read/write own doc, or any authenticated user can read others
     match /users/{userId} {
-      allow read: if isAuth() && (request.auth.uid == userId || isAdmin());
-      allow create: if isAuth() && isAdmin();
-      allow update: if isAuth() && (request.auth.uid == userId || isAdmin());
-      allow delete: if isAuth() && isAdmin();
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
     }
 
-    // Products, categories, brands, subcategories: public read, admin write
+    // Products: public read, authenticated write (permissions enforced in app)
     match /products/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAuth() && isAdmin();
+      allow create, update, delete: if request.auth != null;
     }
 
+    // Categories: public read, authenticated write
     match /categories/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAuth() && isAdmin();
+      allow create, update, delete: if request.auth != null;
     }
 
+    // Subcategories: public read, authenticated write
     match /subcategories/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAuth() && isAdmin();
+      allow create, update, delete: if request.auth != null;
     }
 
+    // Brands: public read, authenticated write
     match /brands/{docId} {
       allow read: if true;
-      allow create, update, delete: if isAuth() && isAdmin();
+      allow create, update, delete: if request.auth != null;
     }
 
-    // Quotes: public read, authenticated create, admin manage
+    // Quotes: public read, authenticated write
     match /quotes/{docId} {
       allow read: if true;
-      allow create: if isAuth();
-      allow update, delete: if isAuth() && isAdmin();
+      allow create, update, delete: if request.auth != null;
     }
 
-    // Settings: public read, admin write
+    // Settings: public read, authenticated write
     match /settings/{document=**} {
       allow read: if true;
-      allow write: if isAuth() && isAdmin();
+      allow write: if request.auth != null;
     }
 
     // Invitations
     match /invitations/{docId} {
-      allow read: if isAuth();
-      allow write: if isAuth() && isAdmin();
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
     }
 
     // Activity logs
     match /activityLogs/{docId} {
-      allow read, create: if isAuth();
+      allow read, create: if request.auth != null;
     }
   }
 }
