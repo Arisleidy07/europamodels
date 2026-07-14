@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, shareContent } from "@/lib/utils";
 import { getQuoteByCode } from "@/lib/quotes";
 import { useSettings } from "@/context/SettingsContext";
 import { Share2, Loader2 } from "lucide-react";
@@ -25,17 +25,15 @@ export default function QuotePage() {
   }, [codigo]);
 
   const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({
+    const ok = await shareContent(
+      {
         title: `Cotización ${quote?.codigo}`,
         text: `Cotización de ${settings.empresa.nombre}`,
-        url,
-      });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success("Enlace copiado");
-    }
+        url: window.location.href,
+      },
+      () => toast.success("Enlace copiado"),
+    );
+    if (!ok) toast.error("No se pudo compartir");
   };
 
   if (loading) {

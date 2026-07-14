@@ -59,3 +59,69 @@ export function getInitials(name: string): string {
     .join("")
     .toUpperCase();
 }
+
+interface SharePayload {
+  title?: string;
+  text?: string;
+  url: string;
+}
+
+export async function shareContent(
+  payload: SharePayload,
+  onCopy?: () => void,
+): Promise<boolean> {
+  try {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      await navigator.share({
+        title: payload.title || "",
+        text: payload.text || "",
+        url: payload.url,
+      });
+      return true;
+    }
+  } catch (err: any) {
+    if (err?.name === "AbortError") return false;
+  }
+
+  try {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      await navigator.clipboard.writeText(payload.url);
+      if (onCopy) onCopy();
+      return true;
+    }
+  } catch {}
+
+  // Last resort: select the URL so the user can copy it manually
+  const input = document.createElement("input");
+  input.value = payload.url;
+  document.body.appendChild(input);
+  input.select();
+  try {
+    document.execCommand("copy");
+    if (onCopy) onCopy();
+  } finally {
+    document.body.removeChild(input);
+  }
+  return true;
+}
+
+export async function downloadFile(
+  url: string,
+  filename: string,
+): Promise<void> {
+  try {
+    const response = await fetch(url, { mode: "cors" });
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch {
+    // Fallback for cross-origin or network errors: open in new tab
+    window.open(url, "_blank");
+  }
+}

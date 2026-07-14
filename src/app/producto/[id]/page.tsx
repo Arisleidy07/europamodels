@@ -7,10 +7,11 @@ import { useCatalogData } from "@/hooks/useCatalogData";
 import { useSettings } from "@/context/SettingsContext";
 import { useCart } from "@/context/CartContext";
 import { Header } from "@/components/Header";
-import { formatCurrency, cn } from "@/lib/utils";
+import { formatCurrency, cn, shareContent, downloadFile } from "@/lib/utils";
 import { getOlfactoryNotes } from "@/lib/olfactory";
 import {
   Share2,
+  Download,
   Plus,
   Check,
   ChevronLeft,
@@ -139,17 +140,23 @@ export default function PublicProductPage() {
   };
 
   const handleShare = async () => {
-    const url = window.location.href;
-    if (navigator.share) {
-      await navigator.share({
+    const ok = await shareContent(
+      {
         title: product.nombre,
         text: settings.empresa.descripcion,
-        url,
-      });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success("Enlace copiado");
-    }
+        url: window.location.href,
+      },
+      () => toast.success("Enlace copiado"),
+    );
+    if (!ok) toast.error("No se pudo compartir");
+  };
+
+  const handleDownloadImage = async () => {
+    const url = images[currentImage];
+    if (!url) return;
+    const name = `${product.nombre.replace(/[^a-z0-9]/gi, "_")}_${currentImage + 1}.jpg`;
+    await downloadFile(url, name);
+    toast.success("Descargando imagen");
   };
 
   const getNotesForIds = (ids: string[] | undefined) =>
@@ -474,6 +481,15 @@ export default function PublicProductPage() {
                 title="Compartir"
               >
                 <Share2 className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={handleDownloadImage}
+                className="shrink-0 px-4"
+                title="Descargar imagen"
+              >
+                <Download className="h-5 w-5" />
               </Button>
             </div>
 

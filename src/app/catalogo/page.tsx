@@ -25,7 +25,7 @@ import { useCatalogData } from "@/hooks/useCatalogData";
 import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { useCart } from "@/context/CartContext";
 import { useSettings } from "@/context/SettingsContext";
-import { normalizeText, formatCurrency, cn } from "@/lib/utils";
+import { normalizeText, formatCurrency, cn, shareContent } from "@/lib/utils";
 import { getOlfactoryNotes } from "@/lib/olfactory";
 import { LicenseGuard } from "@/components/LicenseGuard";
 import type {
@@ -131,17 +131,15 @@ function ProductModal({
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/producto/${product.id}`;
-    if (navigator.share) {
-      await navigator.share({
+    const ok = await shareContent(
+      {
         title: product.nombre,
         text: `${product.nombre} - ${settings.empresa.nombre}`,
-        url,
-      });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success("Enlace copiado");
-    }
+        url: `${window.location.origin}/producto/${product.id}`,
+      },
+      () => toast.success("Enlace copiado"),
+    );
+    if (!ok) toast.error("No se pudo compartir");
   };
 
   const next = () => setCurrentImage((i) => (i + 1) % images.length);

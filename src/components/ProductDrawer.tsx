@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { useCart } from "@/context/CartContext";
 import { useSettings } from "@/context/SettingsContext";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, shareContent } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { ProductWithRelations } from "@/types";
 
@@ -23,7 +23,10 @@ export function ProductDrawer({ product, onClose }: ProductDrawerProps) {
 
   if (!product) return null;
 
-  const images = product.imagenes.length > 0 ? product.imagenes : ["/placeholder-product.svg"];
+  const images =
+    product.imagenes.length > 0
+      ? product.imagenes
+      : ["/placeholder-product.svg"];
 
   const handleAdd = () => {
     addToCart({
@@ -37,21 +40,20 @@ export function ProductDrawer({ product, onClose }: ProductDrawerProps) {
   };
 
   const handleShare = async () => {
-    const url = `${window.location.origin}/producto/${product.id}`;
-    if (navigator.share) {
-      await navigator.share({
+    const ok = await shareContent(
+      {
         title: product.nombre,
         text: `${product.nombre} - ${settings.empresa.nombre}`,
-        url,
-      });
-    } else {
-      await navigator.clipboard.writeText(url);
-      toast.success("Enlace copiado");
-    }
+        url: `${window.location.origin}/producto/${product.id}`,
+      },
+      () => toast.success("Enlace copiado"),
+    );
+    if (!ok) toast.error("No se pudo compartir");
   };
 
   const nextImage = () => setCurrentImage((i) => (i + 1) % images.length);
-  const prevImage = () => setCurrentImage((i) => (i - 1 + images.length) % images.length);
+  const prevImage = () =>
+    setCurrentImage((i) => (i - 1 + images.length) % images.length);
 
   return (
     <AnimatePresence>
@@ -74,7 +76,10 @@ export function ProductDrawer({ product, onClose }: ProductDrawerProps) {
             <div className="flex h-full flex-col">
               <div className="flex items-center justify-between border-b border-border px-6 py-4">
                 <h2 className="text-lg font-semibold">Detalle del producto</h2>
-                <button onClick={onClose} className="rounded-full p-2 transition-colors hover:bg-muted">
+                <button
+                  onClick={onClose}
+                  className="rounded-full p-2 transition-colors hover:bg-muted"
+                >
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -111,10 +116,16 @@ export function ProductDrawer({ product, onClose }: ProductDrawerProps) {
                         key={idx}
                         onClick={() => setCurrentImage(idx)}
                         className={`h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 ${
-                          idx === currentImage ? "border-primary" : "border-transparent"
+                          idx === currentImage
+                            ? "border-primary"
+                            : "border-transparent"
                         }`}
                       >
-                        <img src={img} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={img}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </button>
                     ))}
                   </div>
@@ -126,12 +137,24 @@ export function ProductDrawer({ product, onClose }: ProductDrawerProps) {
                       {product.marca.nombre}
                     </p>
                   )}
-                  <h1 className="mt-1 text-2xl font-bold text-foreground">{product.nombre}</h1>
+                  <h1 className="mt-1 text-2xl font-bold text-foreground">
+                    {product.nombre}
+                  </h1>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {product.categoria && <Badge>{product.categoria.nombre}</Badge>}
-                    {product.subcategoria && <Badge variant="info">{product.subcategoria.nombre}</Badge>}
-                    {product.genero && <Badge variant="default">{product.genero}</Badge>}
-                    {product.estado === "agotado" && <Badge variant="danger">Agotado</Badge>}
+                    {product.categoria && (
+                      <Badge>{product.categoria.nombre}</Badge>
+                    )}
+                    {product.subcategoria && (
+                      <Badge variant="info">
+                        {product.subcategoria.nombre}
+                      </Badge>
+                    )}
+                    {product.genero && (
+                      <Badge variant="default">{product.genero}</Badge>
+                    )}
+                    {product.estado === "agotado" && (
+                      <Badge variant="danger">Agotado</Badge>
+                    )}
                   </div>
 
                   {settings.catalogo.mostrarPrecio && (
@@ -167,10 +190,20 @@ export function ProductDrawer({ product, onClose }: ProductDrawerProps) {
               </div>
 
               <div className="flex items-center gap-3 border-t border-border p-6">
-                <Button variant="outline" size="lg" className="flex-1" onClick={handleShare}>
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="flex-1"
+                  onClick={handleShare}
+                >
                   <Share2 className="mr-2 h-5 w-5" /> Compartir
                 </Button>
-                <Button size="lg" className="flex-[2]" onClick={handleAdd} disabled={product.estado === "agotado"}>
+                <Button
+                  size="lg"
+                  className="flex-[2]"
+                  onClick={handleAdd}
+                  disabled={product.estado === "agotado"}
+                >
                   <Plus className="mr-2 h-5 w-5" /> Agregar
                 </Button>
               </div>
