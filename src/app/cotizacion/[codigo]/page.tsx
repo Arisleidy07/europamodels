@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { formatCurrency } from "@/lib/utils";
 import { getQuoteByCode } from "@/lib/quotes";
 import { useSettings } from "@/context/SettingsContext";
-import { Logo } from "@/components/Logo";
 import { Share2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { Quote } from "@/types";
@@ -65,17 +64,19 @@ export default function QuotePage() {
       <div className="mx-auto max-w-3xl">
         {/* Header card */}
         <div className="overflow-hidden rounded-t-3xl bg-white shadow-sm">
-          <div className="bg-gradient-to-r from-primary to-primary/80 px-6 py-8 sm:px-10">
-            <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
-                  <Logo variant="isotype" height={32} />
-                </div>
+          <div className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 px-6 py-10 sm:px-10">
+            <div className="flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-5">
+                <img
+                  src="/icons/europa-white.PNG"
+                  alt="Europa Models"
+                  className="h-16 w-auto drop-shadow-lg sm:h-20"
+                />
                 <div>
-                  <h1 className="text-xl font-bold text-white">
+                  <h1 className="text-xl font-bold text-white sm:text-2xl">
                     {settings.empresa.nombre}
                   </h1>
-                  <p className="text-sm text-white/70">
+                  <p className="text-sm text-white/60">
                     {settings.empresa.descripcion}
                   </p>
                 </div>
@@ -153,16 +154,24 @@ export default function QuotePage() {
           </section>
 
           {/* Totals */}
-          <section className="mt-8 border-t border-border pt-6">
-            <div className="flex items-center justify-between py-1.5 text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="font-medium text-foreground">
+          <section className="mt-8 rounded-2xl bg-gray-900 p-6 text-white">
+            <div className="flex items-center justify-between py-1 text-sm">
+              <span className="text-white/60">Subtotal</span>
+              <span className="font-medium">
                 {formatCurrency(quote.subtotal)}
               </span>
             </div>
-            <div className="mt-2 flex items-center justify-between border-t border-border pt-3">
-              <span className="text-lg font-bold text-foreground">Total</span>
-              <span className="text-2xl font-bold text-primary">
+            {quote.descuento && quote.descuento > 0 && (
+              <div className="flex items-center justify-between py-1 text-sm">
+                <span className="text-white/60">Descuento</span>
+                <span className="font-medium text-green-400">
+                  -{formatCurrency(quote.descuento)}
+                </span>
+              </div>
+            )}
+            <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3">
+              <span className="text-lg font-bold">Total</span>
+              <span className="text-3xl font-bold">
                 {formatCurrency(quote.total)}
               </span>
             </div>

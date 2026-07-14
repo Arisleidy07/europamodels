@@ -10,15 +10,21 @@ export function formatCurrency(amount: number, currency = "RD$") {
 }
 
 export function normalizeText(text: string): string {
+  if (!text) return "";
   return text
-    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
 
-export function generateQuoteCode(prefix: string, number: number, length = 6): string {
+export function generateQuoteCode(
+  prefix: string,
+  number: number,
+  length = 6,
+): string {
   const padded = number.toString().padStart(length, "0");
   const year = new Date().getFullYear();
   return `${prefix}-${year}-${padded}`;
@@ -28,10 +34,16 @@ export function generateId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
-  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+  return (
+    Math.random().toString(36).substring(2, 15) +
+    Math.random().toString(36).substring(2, 15)
+  );
 }
 
-export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay = 300) {
+export function debounce<T extends (...args: unknown[]) => void>(
+  fn: T,
+  delay = 300,
+) {
   let timer: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {
     clearTimeout(timer);

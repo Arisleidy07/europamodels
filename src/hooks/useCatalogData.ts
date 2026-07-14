@@ -28,6 +28,9 @@ export function useCatalogData() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Track optimistically deleted IDs so stale cache snapshots can't restore them
+  const deletedIds = useRef<Set<string>>(new Set());
+
   const latestProds = useRef<Product[]>([]);
   const latestCats = useRef<Category[]>([]);
   const latestSubs = useRef<Subcategory[]>([]);
@@ -45,7 +48,8 @@ export function useCatalogData() {
       categoria: cats.find((c) => c.id === p.categoriaId),
       subcategoria: subs.find((s) => s.id === p.subcategoriaId),
     }));
-    setProducts(withRelations);
+    const filtered = withRelations.filter((p) => !deletedIds.current.has(p.id));
+    setProducts(filtered);
     setCategories([...cats].sort((a, b) => a.orden - b.orden));
     setSubcategories([...subs].sort((a, b) => a.orden - b.orden));
     setBrands([...brs].sort((a, b) => a.orden - b.orden));
@@ -79,9 +83,9 @@ export function useCatalogData() {
 
     try {
       unsubProducts = onSnapshot(collection(firestore, "products"), (snap) => {
-        const data = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() }) as Product,
-        );
+        const data = snap.docs
+          .map((d) => ({ id: d.id, ...d.data() }) as Product)
+          .filter((p) => !deletedIds.current.has(p.id));
         latestProds.current = data;
         saveProducts(data);
         combine();
@@ -129,5 +133,14 @@ export function useCatalogData() {
     };
   }, [combine]);
 
-  return { products, categories, subcategories, brands, loading };
+  const markDeleted = useCallback(
+    (id: string) => {
+      deletedIds.current.add(id);
+      latestProds.current = latestProds.current.filter((p) => p.id !== id);
+      combine();
+    },
+    [combine],
+  );
+
+  return { products, categories, subcategories, brands, loading, markDeleted };
 }

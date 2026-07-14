@@ -52,6 +52,7 @@ export interface AppUser {
   fechaCreacion: string;
   ultimoAcceso?: string;
   permisos: UserPermissions;
+  requiresPasswordChange?: boolean;
 }
 
 export interface Category {
@@ -82,8 +83,38 @@ export interface Brand {
   activo: boolean;
 }
 
+export type OlfactoryCategory =
+  | "acordes"
+  | "notasSalida"
+  | "notasCorazon"
+  | "notasFondo";
+
+export interface OlfactoryNote {
+  id: string;
+  nombre: string;
+  imagen?: string;
+  categoria: OlfactoryCategory;
+  activo: boolean;
+  fechaCreacion: string;
+}
+
+export interface ProductAccord {
+  id: string;
+  intensidad: number;
+}
+
 export type ProductStatus = "publicado" | "borrador" | "oculto" | "agotado";
 export type ProductGender = "hombre" | "mujer" | "unisex" | "ninos";
+
+export interface ProductVariant {
+  id: string;
+  nombre: string;
+  imagen?: string;
+  precio?: number;
+  precioOferta?: number;
+  stock?: number;
+  codigo?: string;
+}
 
 export interface Product {
   id: string;
@@ -99,9 +130,15 @@ export interface Product {
   precioOferta?: number;
   stock: number;
   imagenes: string[];
+  imagenInformativa?: string;
   video?: string;
   estado: ProductStatus;
   etiquetas: string[];
+  variantes?: ProductVariant[];
+  acordes?: ProductAccord[];
+  notasSalida?: string[];
+  notasCorazon?: string[];
+  notasFondo?: string[];
   destacado?: boolean;
   nuevo?: boolean;
   oferta?: boolean;

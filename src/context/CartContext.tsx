@@ -12,6 +12,9 @@ interface CartContextValue {
   clearCart: () => void;
   totalItems: number;
   totalAmount: number;
+  cartDrawerOpen: boolean;
+  openCartDrawer: () => void;
+  closeCartDrawer: () => void;
 }
 
 const CartContext = createContext<CartContextValue | undefined>(undefined);
@@ -19,6 +22,7 @@ const CartContext = createContext<CartContextValue | undefined>(undefined);
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   useEffect(() => {
     getCart().then((saved) => {
@@ -35,7 +39,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => {
       const existing = prev.find((i) => i.productoId === item.productoId);
       if (existing) {
-        return prev.map((i) => (i.productoId === item.productoId ? { ...i, cantidad: i.cantidad + 1 } : i));
+        return prev.map((i) =>
+          i.productoId === item.productoId
+            ? { ...i, cantidad: i.cantidad + 1 }
+            : i,
+        );
       }
       return [...prev, { ...item, cantidad: 1 }];
     });
@@ -50,7 +58,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       removeFromCart(productoId);
       return;
     }
-    setItems((prev) => prev.map((i) => (i.productoId === productoId ? { ...i, cantidad: quantity } : i)));
+    setItems((prev) =>
+      prev.map((i) =>
+        i.productoId === productoId ? { ...i, cantidad: quantity } : i,
+      ),
+    );
   };
 
   const clearCart = () => setItems([]);
@@ -58,8 +70,24 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const totalItems = items.reduce((sum, i) => sum + i.cantidad, 0);
   const totalAmount = items.reduce((sum, i) => sum + i.precio * i.cantidad, 0);
 
+  const openCartDrawer = () => setCartDrawerOpen(true);
+  const closeCartDrawer = () => setCartDrawerOpen(false);
+
   return (
-    <CartContext.Provider value={{ items, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalAmount }}>
+    <CartContext.Provider
+      value={{
+        items,
+        addToCart,
+        removeFromCart,
+        updateQuantity,
+        clearCart,
+        totalItems,
+        totalAmount,
+        cartDrawerOpen,
+        openCartDrawer,
+        closeCartDrawer,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -16,6 +17,7 @@ import {
   Edit,
   Copy,
   FileText,
+  Droplets,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
@@ -27,6 +29,7 @@ import AdminBrands from "@/components/admin/AdminBrands";
 import AdminTeam from "@/components/admin/AdminTeam";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
+import AdminOlfactory from "@/components/admin/AdminOlfactory";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { deleteProduct } from "@/lib/products";
@@ -37,7 +40,7 @@ import type { Product } from "@/types";
 export default function AdminPage() {
   const router = useRouter();
   const { user, hasPermission } = useAuth();
-  const { products, categories, subcategories, brands, loading } =
+  const { products, categories, subcategories, brands, loading, markDeleted } =
     useCatalogData();
 
   const tabs = [
@@ -59,6 +62,13 @@ export default function AdminPage() {
         hasPermission("marcas", "crear") ||
         hasPermission("marcas", "editar") ||
         hasPermission("marcas", "eliminar"),
+    },
+    {
+      id: "biblioteca",
+      label: "Biblioteca Olfativa",
+      icon: Droplets,
+      visible:
+        user?.rol === "administrador" || hasPermission("productos", "crear"),
     },
     {
       id: "cotizaciones",
@@ -99,7 +109,24 @@ export default function AdminPage() {
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+
+  const openMenu = useCallback((id: string, btn: HTMLButtonElement) => {
+    const rect = btn.getBoundingClientRect();
+    setMenuPos({
+      top: rect.bottom + 4 + window.scrollY,
+      right: window.innerWidth - rect.right,
+    });
+    setMenuOpen((prev) => (prev === id ? null : id));
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = () => setTimeout(() => setMenuOpen(null), 80);
+    window.addEventListener("click", close, { capture: true, once: true });
+    return () => window.removeEventListener("click", close, { capture: true });
+  }, [menuOpen]);
 
   if (!user) {
     return (
@@ -118,8 +145,11 @@ export default function AdminPage() {
   }
 
   const canManageProducts =
-    hasPermission("productos", "crear") || hasPermission("productos", "editar");
-  const canDeleteProducts = hasPermission("productos", "eliminar");
+    user?.rol === "administrador" ||
+    hasPermission("productos", "crear") ||
+    hasPermission("productos", "editar");
+  const canDeleteProducts =
+    user?.rol === "administrador" || hasPermission("productos", "eliminar");
 
   const filteredProducts = products.filter((p) => {
     const term = normalizeText(search);
@@ -133,13 +163,14 @@ export default function AdminPage() {
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    markDeleted(target.id); // optimistic — remove immediately
     try {
-      await deleteProduct(deleteTarget.id);
+      await deleteProduct(target.id);
       toast.success("Producto eliminado");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
-    } finally {
-      setDeleteTarget(null);
     }
   };
 
@@ -273,55 +304,15 @@ export default function AdminPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="relative inline-block">
-                              <button
-                                onClick={() =>
-                                  setMenuOpen(
-                                    menuOpen === product.id ? null : product.id,
-                                  )
-                                }
-                                className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </button>
-                              {menuOpen === product.id && (
-                                <div className="absolute right-0 z-10 mt-1 w-40 rounded-xl border border-border bg-white p-1 shadow-lg">
-                                  <button
-                                    onClick={() => {
-                                      setEditingProduct(product);
-                                      setProductFormOpen(true);
-                                      setMenuOpen(null);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted"
-                                  >
-                                    <Edit className="h-4 w-4" /> Editar
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(
-                                        `${window.location.origin}/producto/${product.id}`,
-                                      );
-                                      toast.success("Enlace copiado");
-                                      setMenuOpen(null);
-                                    }}
-                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted"
-                                  >
-                                    <Copy className="h-4 w-4" /> Copiar enlace
-                                  </button>
-                                  {canDeleteProducts && (
-                                    <button
-                                      onClick={() => {
-                                        setDeleteTarget(product);
-                                        setMenuOpen(null);
-                                      }}
-                                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-red-50"
-                                    >
-                                      <Trash2 className="h-4 w-4" /> Eliminar
-                                    </button>
-                                  )}
-                                </div>
-                              )}
-                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openMenu(product.id, e.currentTarget);
+                              }}
+                              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -334,6 +325,7 @@ export default function AdminPage() {
 
           {activeTab === "categorias" && <AdminCategories />}
           {activeTab === "marcas" && <AdminBrands />}
+          {activeTab === "biblioteca" && <AdminOlfactory />}
           {activeTab === "cotizaciones" && <AdminQuotes />}
           {activeTab === "equipo" && <AdminTeam />}
           {activeTab === "configuracion" && <AdminSettings />}
@@ -349,35 +341,77 @@ export default function AdminPage() {
         onCancel={() => setDeleteTarget(null)}
       />
 
+      {/* Portal menu — renders above all containers */}
+      {menuOpen &&
+        typeof window !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed z-[9999] w-48 rounded-xl border border-border bg-white p-1 shadow-xl"
+            style={{ top: menuPos.top, right: menuPos.right }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {filteredProducts
+              .filter((p) => p.id === menuOpen)
+              .map((product) => (
+                <React.Fragment key={product.id}>
+                  <button
+                    onClick={() => {
+                      setEditingProduct(product);
+                      setProductFormOpen(true);
+                      setMenuOpen(null);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  >
+                    <Edit className="h-4 w-4" /> Editar
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `${window.location.origin}/producto/${product.id}`,
+                      );
+                      toast.success("Enlace copiado");
+                      setMenuOpen(null);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted"
+                  >
+                    <Copy className="h-4 w-4" /> Copiar enlace
+                  </button>
+                  {canDeleteProducts && (
+                    <button
+                      onClick={() => {
+                        setDeleteTarget(product);
+                        setMenuOpen(null);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" /> Eliminar
+                    </button>
+                  )}
+                </React.Fragment>
+              ))}
+          </div>,
+          document.body,
+        )}
+
       <AnimatePresence>
         {productFormOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setProductFormOpen(false)}
-              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex flex-col bg-white"
+          >
+            <ProductForm
+              product={editingProduct}
+              categories={categories}
+              subcategories={subcategories}
+              brands={brands}
+              onClose={() => setProductFormOpen(false)}
+              onSaved={() => {
+                toast.success("Catálogo actualizado");
+              }}
             />
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ type: "spring", damping: 28, stiffness: 350 }}
-              className="fixed inset-4 z-50 mx-auto flex max-h-[94vh] max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:inset-6 md:inset-10"
-            >
-              <ProductForm
-                product={editingProduct}
-                categories={categories}
-                subcategories={subcategories}
-                brands={brands}
-                onClose={() => setProductFormOpen(false)}
-                onSaved={() => {
-                  toast.success("Catálogo actualizado");
-                }}
-              />
-            </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>

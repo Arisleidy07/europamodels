@@ -39,6 +39,21 @@ export async function uploadProductImages(
   return urls;
 }
 
+export async function uploadProductInfoImage(
+  productId: string,
+  file: File,
+): Promise<string> {
+  const storage = getFirebaseStorage();
+  if (!storage) throw new Error("Firebase Storage no está configurado");
+  const ext = file.name.split(".").pop() || "webp";
+  const storageRef = ref(
+    storage,
+    `products/${productId}/info/${Date.now()}.${ext}`,
+  );
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+}
+
 export async function createProduct(
   product: Omit<Product, "id">,
 ): Promise<Product> {

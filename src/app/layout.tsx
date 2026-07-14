@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { Toaster } from "react-hot-toast";
+import { AuthGate } from "@/components/AuthGate";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -40,7 +41,7 @@ export default function RootLayout({
         <SettingsProvider>
           <AuthProvider>
             <CartProvider>
-              {children}
+              <AuthGate>{children}</AuthGate>
               <Toaster
                 position="bottom-center"
                 toastOptions={{

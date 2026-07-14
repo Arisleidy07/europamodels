@@ -60,7 +60,7 @@ export default function HomePage() {
           <img
             src="/icons/europa-white.PNG"
             alt="Europa Models"
-            className="h-12 w-auto drop-shadow-lg"
+            className="h-16 w-auto drop-shadow-lg"
           />
           <Link
             href={user ? "/perfil" : "/login"}
@@ -81,12 +81,12 @@ export default function HomePage() {
           <img
             src="/icons/europa-white.PNG"
             alt="Europa Models"
-            className="mb-6 h-20 w-auto drop-shadow-2xl sm:hidden"
+            className="mb-6 h-24 w-auto drop-shadow-2xl sm:hidden"
           />
           <img
             src="/icons/europa-white.PNG"
             alt="Europa Models"
-            className="mb-8 hidden h-28 w-auto drop-shadow-2xl sm:block lg:h-32"
+            className="mb-8 hidden h-32 w-auto drop-shadow-2xl sm:block lg:h-40"
           />
 
           <h1 className="max-w-3xl text-3xl font-bold tracking-tight text-white drop-shadow-lg sm:text-4xl lg:text-5xl">

@@ -7,17 +7,10 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   signOut,
-  createUserWithEmailAndPassword,
-  updateProfile,
+  updatePassword,
   User as FirebaseUser,
 } from "firebase/auth";
-import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-  serverTimestamp,
-} from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { getFirebaseAuth, getFirebaseDb } from "@/lib/firebase";
 import type { AppUser, UserPermissions } from "@/types";
 
@@ -25,14 +18,11 @@ interface AuthContextValue {
   user: AppUser | null;
   firebaseUser: FirebaseUser | null;
   loading: boolean;
+  requiresPasswordChange: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
-  completeInvitation: (
-    email: string,
-    password: string,
-    nombre: string,
-  ) => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
   hasPermission: (scope: keyof UserPermissions, action: string) => boolean;
   canManageUser: (target: AppUser) => boolean;
 }
@@ -76,6 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [requiresPasswordChange, setRequiresPasswordChange] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -92,12 +83,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
           const data = userDoc.data() as Omit<AppUser, "id">;
           setUser({ ...data, id: fbUser.uid });
+          setRequiresPasswordChange(!!data.requiresPasswordChange);
           await updateDoc(doc(firestore, "users", fbUser.uid), {
             ultimoAcceso: new Date().toISOString(),
           });
         }
       } else {
         setUser(null);
+        setRequiresPasswordChange(false);
       }
       setLoading(false);
     });
@@ -114,6 +107,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const data = userDoc.data() as Omit<AppUser, "id">;
     if (!data.activo) throw new Error("Cuenta suspendida");
     setUser({ ...data, id: result.user.uid });
+    setRequiresPasswordChange(!!data.requiresPasswordChange);
   };
 
   const loginWithGoogle = async () => {
@@ -150,27 +144,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const auth = getFirebaseAuth();
     if (auth) await signOut(auth);
     setUser(null);
+    setRequiresPasswordChange(false);
   };
 
-  const completeInvitation = async (
-    email: string,
-    password: string,
-    nombre: string,
-  ) => {
+  const changePassword = async (newPassword: string) => {
     const auth = getFirebaseAuth();
     const firestore = getFirebaseDb();
-    if (!auth || !firestore) throw new Error("Firebase no está configurado");
-    const result = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(result.user, { displayName: nombre });
-    const newUser: Omit<AppUser, "id"> = {
-      nombre,
-      correo: email,
-      activo: true,
-      fechaCreacion: new Date().toISOString(),
-      permisos: defaultPermissions,
-    };
-    await setDoc(doc(firestore, "users", result.user.uid), newUser);
-    setUser({ ...newUser, id: result.user.uid });
+    if (!auth?.currentUser || !firestore) throw new Error("No autenticado");
+    await updatePassword(auth.currentUser, newPassword);
+    await updateDoc(doc(firestore, "users", auth.currentUser.uid), {
+      requiresPasswordChange: false,
+    });
+    setRequiresPasswordChange(false);
+    if (user) setUser({ ...user, requiresPasswordChange: false });
   };
 
   const hasPermission = (
@@ -203,10 +189,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         firebaseUser,
         loading,
+        requiresPasswordChange,
         login,
         loginWithGoogle,
         logout,
-        completeInvitation,
+        changePassword,
         hasPermission,
         canManageUser,
       }}

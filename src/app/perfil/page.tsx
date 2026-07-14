@@ -8,9 +8,13 @@ import {
   LogOut,
   Mail,
   Shield,
-  Briefcase,
   Loader2,
   Camera,
+  Lock,
+  Eye,
+  EyeOff,
+  Calendar,
+  User,
 } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { Header } from "@/components/Header";
@@ -24,17 +28,22 @@ import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, changePassword } = useAuth();
   const [form, setForm] = useState({
     nombre: user?.nombre || "",
     apellido: user?.apellido || "",
-    correo: user?.correo || "",
-    cargo: user?.cargo || "",
   });
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(user?.foto || "");
   const photoRef = useRef<HTMLInputElement>(null);
+
+  // Password change
+  const [showPassSection, setShowPassSection] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [changingPass, setChangingPass] = useState(false);
 
   if (!user) {
     return (
@@ -83,13 +92,35 @@ export default function ProfilePage() {
       await updateUser(user.id, {
         nombre: form.nombre,
         apellido: form.apellido,
-        cargo: form.cargo,
       });
       toast.success("Perfil actualizado");
     } catch (err: any) {
       toast.error(err.message || "Error al actualizar");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPass.length < 6) {
+      toast.error("Mínimo 6 caracteres");
+      return;
+    }
+    if (newPass !== confirmPass) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+    setChangingPass(true);
+    try {
+      await changePassword(newPass);
+      toast.success("Contraseña actualizada");
+      setNewPass("");
+      setConfirmPass("");
+      setShowPassSection(false);
+    } catch (err: any) {
+      toast.error(err.message || "Error al cambiar contraseña");
+    } finally {
+      setChangingPass(false);
     }
   };
 
@@ -103,15 +134,16 @@ export default function ProfilePage() {
       <Header />
 
       <main className="flex-1 px-4 py-8 lg:px-8">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-4xl space-y-6">
+          {/* Profile Card */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm"
           >
-            <div className="relative h-32 bg-gradient-to-r from-primary to-primary/80">
-              <div className="absolute -bottom-12 left-8">
-                <div className="group relative flex h-24 w-24 items-center justify-center rounded-2xl border-4 border-white bg-muted text-3xl font-bold text-foreground shadow-sm">
+            <div className="relative h-36 bg-gradient-to-br from-primary via-primary/90 to-primary/70">
+              <div className="absolute -bottom-14 left-8">
+                <div className="group relative flex h-28 w-28 items-center justify-center rounded-2xl border-4 border-white bg-muted text-3xl font-bold text-foreground shadow-lg">
                   {photoPreview ? (
                     <img
                       src={photoPreview}
@@ -143,15 +175,13 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="px-8 pb-8 pt-16">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="px-8 pb-8 pt-18">
+              <div className="mt-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div>
                   <h1 className="text-2xl font-bold text-foreground">
                     {user.nombre}
                   </h1>
-                  <p className="text-muted-foreground">
-                    {user.cargo || user.rol}
-                  </p>
+                  <p className="text-muted-foreground">{user.correo}</p>
                 </div>
                 <Button
                   variant="outline"
@@ -162,64 +192,144 @@ export default function ProfilePage() {
                 </Button>
               </div>
 
-              <div className="mt-8 grid gap-6 sm:grid-cols-2">
-                <Input
-                  label="Nombre"
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-                />
-                <Input
-                  label="Apellido"
-                  value={form.apellido}
-                  onChange={(e) =>
-                    setForm({ ...form, apellido: e.target.value })
-                  }
-                />
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Correo
-                  </label>
-                  <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    {form.correo}
-                  </div>
+              {/* Info pills */}
+              <div className="mt-6 flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                  <Shield className="h-4 w-4" />
+                  <span className="capitalize">{user.rol}</span>
                 </div>
-                <Input
-                  label="Cargo"
-                  value={form.cargo}
-                  onChange={(e) => setForm({ ...form, cargo: e.target.value })}
-                />
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Rol
-                  </label>
-                  <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm capitalize text-foreground">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    {user.rol}
-                  </div>
+                <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  {user.activo ? "Activo" : "Inactivo"}
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-muted-foreground">
-                    Estado
-                  </label>
-                  <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground">
-                    <Briefcase className="h-4 w-4 text-muted-foreground" />
-                    {user.activo ? "Activo" : "Inactivo"}
+                {user.fechaCreacion && (
+                  <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4" />
+                    Desde{" "}
+                    {new Date(user.fechaCreacion).toLocaleDateString("es-DO", {
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </div>
-                </div>
-              </div>
-
-              <div className="mt-8 flex justify-end">
-                <Button onClick={handleSave} disabled={saving}>
-                  {saving ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="mr-2 h-4 w-4" />
-                  )}
-                  Guardar cambios
-                </Button>
+                )}
               </div>
             </div>
+          </motion.div>
+
+          {/* Edit Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8"
+          >
+            <h2 className="text-lg font-bold text-foreground">
+              Información personal
+            </h2>
+            <div className="mt-5 grid gap-5 sm:grid-cols-2">
+              <Input
+                label="Nombre"
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+              />
+              <Input
+                label="Apellido"
+                value={form.apellido || ""}
+                onChange={(e) => setForm({ ...form, apellido: e.target.value })}
+              />
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-muted-foreground">
+                  Usuario
+                </label>
+                <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/50 px-4 py-3 text-sm text-foreground">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                  {user.correo}
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Save className="mr-2 h-4 w-4" />
+                )}
+                Guardar cambios
+              </Button>
+            </div>
+          </motion.div>
+
+          {/* Password Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8"
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold text-foreground">Contraseña</h2>
+              {!showPassSection && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowPassSection(true)}
+                >
+                  <Lock className="mr-2 h-4 w-4" /> Cambiar
+                </Button>
+              )}
+            </div>
+            {showPassSection && (
+              <div className="mt-5 space-y-4">
+                <div className="relative">
+                  <Input
+                    label="Nueva contraseña"
+                    type={showPass ? "text" : "password"}
+                    value={newPass}
+                    onChange={(e) => setNewPass(e.target.value)}
+                    placeholder="Mínimo 6 caracteres"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-[2.1rem] text-muted-foreground"
+                  >
+                    {showPass ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+                <Input
+                  label="Confirmar contraseña"
+                  type={showPass ? "text" : "password"}
+                  value={confirmPass}
+                  onChange={(e) => setConfirmPass(e.target.value)}
+                  placeholder="Repite tu contraseña"
+                />
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowPassSection(false);
+                      setNewPass("");
+                      setConfirmPass("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleChangePassword}
+                    disabled={changingPass || !newPass || !confirmPass}
+                  >
+                    {changingPass && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Actualizar contraseña
+                  </Button>
+                </div>
+              </div>
+            )}
           </motion.div>
         </div>
       </main>

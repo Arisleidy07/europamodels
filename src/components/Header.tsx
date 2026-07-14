@@ -22,12 +22,14 @@ interface HeaderProps {
   search?: string;
   onSearchChange?: (value: string) => void;
   onOpenCart?: () => void;
+  onSelectProduct?: (product: import("@/types").ProductWithRelations) => void;
 }
 
 export function Header({
   search = "",
   onSearchChange,
   onOpenCart,
+  onSelectProduct,
 }: HeaderProps) {
   const pathname = usePathname();
   const { user, hasPermission } = useAuth();
@@ -54,14 +56,14 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur-md">
-      <div className="flex h-16 items-center gap-3 px-4 lg:px-8">
+      <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center">
-          <Logo variant="horizontal" height={38} className="hidden sm:block" />
-          <Logo variant="isotype" height={34} className="sm:hidden" />
+          <Logo variant="horizontal" height={44} className="hidden sm:block" />
+          <Logo variant="isotype" height={36} className="sm:hidden" />
         </Link>
 
-        {/* Nav links */}
+        {/* Desktop nav links */}
         <nav className="hidden items-center gap-1 sm:flex">
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -84,45 +86,27 @@ export function Header({
           })}
         </nav>
 
-        {/* Search — grows to fill center */}
+        {/* Search — always visible, grows to fill */}
         {onSearchChange ? (
           <div className="min-w-0 flex-1">
-            <SearchBar value={search} onChange={onSearchChange} />
+            <SearchBar
+              value={search}
+              onChange={onSearchChange}
+              onSelectProduct={onSelectProduct}
+            />
           </div>
         ) : (
           <div className="flex-1" />
         )}
 
-        {/* Right actions */}
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        {/* Desktop right actions — hidden on mobile (use BottomNav) */}
+        <div className="hidden shrink-0 items-center gap-1.5 sm:flex sm:gap-2">
           {!online && (
-            <div className="hidden items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 sm:flex">
+            <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700">
               <WifiOff className="h-3.5 w-3.5" />
               Offline
             </div>
           )}
-
-          {/* Mobile nav */}
-          <div className="flex items-center gap-1 sm:hidden">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const active = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  <Icon className="h-4 w-4" />
-                </Link>
-              );
-            })}
-          </div>
 
           {/* Cart */}
           {onOpenCart && (
@@ -163,6 +147,13 @@ export function Header({
             )}
           </Link>
         </div>
+
+        {/* Mobile offline indicator only */}
+        {!online && (
+          <div className="flex items-center sm:hidden">
+            <WifiOff className="h-4 w-4 text-amber-500" />
+          </div>
+        )}
       </div>
     </header>
   );
