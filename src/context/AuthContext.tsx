@@ -23,6 +23,7 @@ interface AuthContextValue {
   loginWithGoogle: () => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (newPassword: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
   hasPermission: (scope: keyof UserPermissions, action: string) => boolean;
   canManageUser: (target: AppUser) => boolean;
 }
@@ -159,6 +160,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) setUser({ ...user, requiresPasswordChange: false });
   };
 
+  const refreshUser = async () => {
+    const auth = getFirebaseAuth();
+    const firestore = getFirebaseDb();
+    if (!auth?.currentUser || !firestore) return;
+    const userDoc = await getDoc(doc(firestore, "users", auth.currentUser.uid));
+    if (userDoc.exists()) {
+      const data = userDoc.data() as Omit<AppUser, "id">;
+      setUser({ ...data, id: auth.currentUser.uid });
+    }
+  };
+
   const hasPermission = (
     scope: keyof UserPermissions,
     action: string,
@@ -194,6 +206,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle,
         logout,
         changePassword,
+        refreshUser,
         hasPermission,
         canManageUser,
       }}

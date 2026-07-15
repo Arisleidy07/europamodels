@@ -180,7 +180,7 @@ export default function AdminPage() {
 
       {/* Admin tab bar */}
       <div className="border-b border-border bg-white">
-        <div className="flex items-center gap-1 overflow-x-auto px-4 lg:px-8">
+        <div className="flex items-center gap-1 overflow-x-auto px-4 py-1 scrollbar-none lg:px-8">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const active = activeTab === tab.id;
@@ -189,10 +189,10 @@ export default function AdminPage() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+                  "flex shrink-0 items-center gap-1.5 rounded-lg border-b-2 px-3 py-2.5 text-xs font-medium transition-colors sm:gap-2 sm:px-4 sm:py-3 sm:text-sm",
                   active
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
+                    ? "border-primary bg-primary/5 text-primary"
+                    : "border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />
@@ -229,7 +229,7 @@ export default function AdminPage() {
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar productos..."
+                  placeholder="Buscar productos"
                   className="pl-10"
                 />
               </div>
@@ -239,60 +239,43 @@ export default function AdminPage() {
                   {Array.from({ length: 5 }).map((_, i) => (
                     <div
                       key={i}
-                      className="h-16 animate-pulse rounded-xl bg-gray-100"
+                      className="h-20 animate-pulse rounded-xl bg-gray-100"
                     />
                   ))}
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm">
-                  <table className="w-full text-left text-sm">
-                    <thead className="bg-muted/50 text-muted-foreground">
-                      <tr>
-                        <th className="px-4 py-3 font-medium">Producto</th>
-                        <th className="hidden px-4 py-3 font-medium md:table-cell">
-                          Marca
-                        </th>
-                        <th className="hidden px-4 py-3 font-medium md:table-cell">
-                          Categoría
-                        </th>
-                        <th className="px-4 py-3 font-medium">Precio</th>
-                        <th className="px-4 py-3 font-medium">Estado</th>
-                        <th className="px-4 py-3 font-medium"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {filteredProducts.map((product) => (
-                        <tr key={product.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={
-                                  product.imagenes[0] ||
-                                  "/placeholder-product.svg"
-                                }
-                                alt=""
-                                className="h-10 w-10 rounded-lg object-cover"
-                              />
-                              <span className="font-medium text-foreground">
-                                {product.nombre}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                            {product.marca?.nombre}
-                          </td>
-                          <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                <>
+                  {/* Mobile cards */}
+                  <div className="grid gap-3 md:hidden">
+                    {filteredProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className="flex items-center gap-3 rounded-2xl border border-border bg-white p-3 shadow-sm"
+                      >
+                        <img
+                          src={
+                            product.imagenes[0] || "/placeholder-product.svg"
+                          }
+                          alt=""
+                          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-medium text-foreground">
+                            {product.nombre}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {product.marca?.nombre} ·{" "}
                             {product.categoria?.nombre}
-                          </td>
-                          <td className="px-4 py-3 font-medium text-foreground">
-                            {formatCurrency(
-                              product.precioOferta || product.precio,
-                            )}
-                          </td>
-                          <td className="px-4 py-3">
+                          </p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="text-sm font-semibold text-foreground">
+                              {formatCurrency(
+                                product.precioOferta || product.precio,
+                              )}
+                            </span>
                             <span
                               className={cn(
-                                "rounded-full px-2.5 py-1 text-xs font-medium",
+                                "rounded-full px-2 py-0.5 text-[10px] font-medium",
                                 product.estado === "publicado"
                                   ? "bg-green-50 text-success"
                                   : product.estado === "agotado"
@@ -302,23 +285,94 @@ export default function AdminPage() {
                             >
                               {product.estado}
                             </span>
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openMenu(product.id, e.currentTarget);
-                              }}
-                              className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </button>
-                          </td>
+                          </div>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openMenu(product.id, e.currentTarget);
+                          }}
+                          className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Desktop table */}
+                  <div className="hidden overflow-hidden rounded-2xl border border-border bg-white shadow-sm md:block">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-muted/50 text-muted-foreground">
+                        <tr>
+                          <th className="px-4 py-3 font-medium">Producto</th>
+                          <th className="px-4 py-3 font-medium">Marca</th>
+                          <th className="px-4 py-3 font-medium">Categoría</th>
+                          <th className="px-4 py-3 font-medium">Precio</th>
+                          <th className="px-4 py-3 font-medium">Estado</th>
+                          <th className="px-4 py-3 font-medium"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {filteredProducts.map((product) => (
+                          <tr key={product.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={
+                                    product.imagenes[0] ||
+                                    "/placeholder-product.svg"
+                                  }
+                                  alt=""
+                                  className="h-10 w-10 rounded-lg object-cover"
+                                />
+                                <span className="font-medium text-foreground">
+                                  {product.nombre}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {product.marca?.nombre}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {product.categoria?.nombre}
+                            </td>
+                            <td className="px-4 py-3 font-medium text-foreground">
+                              {formatCurrency(
+                                product.precioOferta || product.precio,
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span
+                                className={cn(
+                                  "rounded-full px-2.5 py-1 text-xs font-medium",
+                                  product.estado === "publicado"
+                                    ? "bg-green-50 text-success"
+                                    : product.estado === "agotado"
+                                      ? "bg-red-50 text-danger"
+                                      : "bg-gray-100 text-muted-foreground",
+                                )}
+                              >
+                                {product.estado}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-right">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openMenu(product.id, e.currentTarget);
+                                }}
+                                className="rounded-lg p-2 text-muted-foreground hover:bg-muted"
+                              >
+                                <MoreVertical className="h-4 w-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}

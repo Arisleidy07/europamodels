@@ -15,8 +15,15 @@ import {
   EyeOff,
   Calendar,
   User,
+  Trash2,
 } from "lucide-react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  listAll,
+} from "firebase/storage";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -28,7 +35,7 @@ import toast from "react-hot-toast";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, logout, changePassword } = useAuth();
+  const { user, logout, changePassword, refreshUser } = useAuth();
   const [form, setForm] = useState({
     nombre: user?.nombre || "",
     apellido: user?.apellido || "",
@@ -36,6 +43,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(user?.foto || "");
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
 
   // Password change
@@ -77,12 +85,37 @@ export default function ProfilePage() {
       const url = await getDownloadURL(storageRef);
       await updateUser(user.id, { foto: url });
       setPhotoPreview(url);
+      await refreshUser();
       toast.success("Foto actualizada");
     } catch (err: any) {
       toast.error(err.message || "Error al subir foto");
     } finally {
       setUploadingPhoto(false);
       if (photoRef.current) photoRef.current.value = "";
+      setShowPhotoOptions(false);
+    }
+  };
+
+  const handleDeletePhoto = async () => {
+    const storage = getFirebaseStorage();
+    if (!storage) {
+      toast.error("Firebase Storage no está configurado");
+      return;
+    }
+    setUploadingPhoto(true);
+    try {
+      const folderRef = ref(storage, `profiles/${user.id}`);
+      const list = await listAll(folderRef);
+      await Promise.all(list.items.map((item) => deleteObject(item)));
+      await updateUser(user.id, { foto: "" });
+      setPhotoPreview("");
+      await refreshUser();
+      toast.success("Foto eliminada");
+    } catch (err: any) {
+      toast.error(err.message || "Error al eliminar foto");
+    } finally {
+      setUploadingPhoto(false);
+      setShowPhotoOptions(false);
     }
   };
 
@@ -134,84 +167,107 @@ export default function ProfilePage() {
       <Header />
 
       <main className="flex-1 px-4 py-8 lg:px-8">
-        <div className="mx-auto max-w-4xl space-y-6">
+        <div className="mx-auto max-w-3xl space-y-6">
           {/* Profile Card */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="overflow-hidden rounded-3xl border border-border bg-white shadow-sm"
+            className="rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-10"
           >
-            <div className="relative h-36 bg-gradient-to-br from-primary via-primary/90 to-primary/70">
-              <div className="absolute -bottom-14 left-8">
-                <div className="group relative flex h-28 w-28 items-center justify-center rounded-2xl border-4 border-white bg-muted text-3xl font-bold text-foreground shadow-lg">
+            <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left">
+              <div className="relative">
+                <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-3xl border-4 border-background bg-muted text-3xl font-bold text-foreground shadow-md">
                   {photoPreview ? (
                     <img
                       src={photoPreview}
                       alt=""
-                      className="h-full w-full rounded-xl object-cover"
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     getInitials(user.nombre)
                   )}
-                  <button
-                    onClick={() => photoRef.current?.click()}
-                    disabled={uploadingPhoto}
-                    className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 transition-opacity group-hover:opacity-100"
-                  >
-                    {uploadingPhoto ? (
-                      <Loader2 className="h-6 w-6 animate-spin text-white" />
-                    ) : (
-                      <Camera className="h-6 w-6 text-white" />
-                    )}
-                  </button>
-                  <input
-                    ref={photoRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePhotoUpload}
-                  />
                 </div>
-              </div>
-            </div>
-
-            <div className="px-8 pb-8 pt-18">
-              <div className="mt-6 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground">
-                    {user.nombre}
-                  </h1>
-                  <p className="text-muted-foreground">{user.correo}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={handleLogout}
-                  className="shrink-0"
+                <button
+                  onClick={() => setShowPhotoOptions((v) => !v)}
+                  disabled={uploadingPhoto}
+                  className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border-2 border-white bg-primary text-white shadow-md hover:bg-primary-600"
                 >
-                  <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
-                </Button>
-              </div>
+                  {uploadingPhoto ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </button>
 
-              {/* Info pills */}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
-                  <Shield className="h-4 w-4" />
-                  <span className="capitalize">{user.rol}</span>
-                </div>
-                <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  {user.activo ? "Activo" : "Inactivo"}
-                </div>
-                {user.fechaCreacion && (
-                  <div className="flex items-center gap-2 rounded-full bg-muted px-4 py-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    Desde{" "}
-                    {new Date(user.fechaCreacion).toLocaleDateString("es-DO", {
-                      month: "short",
-                      year: "numeric",
-                    })}
+                {showPhotoOptions && (
+                  <div className="absolute right-0 top-full z-20 mt-2 w-44 rounded-xl border border-border bg-white p-1 shadow-xl">
+                    <button
+                      onClick={() => photoRef.current?.click()}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-foreground hover:bg-muted"
+                    >
+                      <Camera className="h-4 w-4" /> Cambiar foto
+                    </button>
+                    {photoPreview && (
+                      <button
+                        onClick={handleDeletePhoto}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" /> Eliminar foto
+                      </button>
+                    )}
                   </div>
                 )}
+
+                <input
+                  ref={photoRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handlePhotoUpload}
+                />
+              </div>
+
+              <div className="mt-6 sm:ml-8 sm:mt-0 sm:flex-1">
+                <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
+                  <div>
+                    <h1 className="text-2xl font-bold text-foreground">
+                      {user.nombre} {user.apellido || ""}
+                    </h1>
+                    <p className="text-muted-foreground">{user.correo}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="shrink-0"
+                  >
+                    <LogOut className="mr-2 h-4 w-4" /> Cerrar sesión
+                  </Button>
+                </div>
+
+                <div className="mt-5 flex flex-wrap justify-center gap-2 sm:justify-start">
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">
+                    <Shield className="h-3.5 w-3.5" />
+                    <span className="capitalize">{user.rol}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+                    <User className="h-3.5 w-3.5" />
+                    {user.activo ? "Activo" : "Inactivo"}
+                  </span>
+                  {user.fechaCreacion && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs text-muted-foreground">
+                      <Calendar className="h-3.5 w-3.5" />
+                      Desde{" "}
+                      {new Date(user.fechaCreacion).toLocaleDateString(
+                        "es-DO",
+                        {
+                          month: "short",
+                          year: "numeric",
+                        },
+                      )}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </motion.div>

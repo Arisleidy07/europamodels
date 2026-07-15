@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { useSettings } from "@/context/SettingsContext";
 import { useCart } from "@/context/CartContext";
+import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { formatCurrency, cn, shareContent, downloadFile } from "@/lib/utils";
 import { getOlfactoryNotes } from "@/lib/olfactory";
@@ -45,7 +46,12 @@ export default function PublicProductPage() {
   const router = useRouter();
   const { products, loading } = useCatalogData();
   const { settings } = useSettings();
-  const { addToCart } = useCart();
+  const { addToCart, openCartDrawer } = useCart();
+  const { user, hasPermission } = useAuth();
+  const isAdmin =
+    user?.rol === "administrador" ||
+    hasPermission("productos", "crear") ||
+    hasPermission("productos", "editar");
 
   const [product, setProduct] = useState<ProductWithRelations | null>(null);
   const [currentImage, setCurrentImage] = useState(0);
@@ -143,7 +149,7 @@ export default function PublicProductPage() {
     const ok = await shareContent(
       {
         title: product.nombre,
-        text: settings.empresa.descripcion,
+        text: `${product.nombre} - ${settings.empresa.nombre}`,
         url: window.location.href,
       },
       () => toast.success("Enlace copiado"),
@@ -182,6 +188,7 @@ export default function PublicProductPage() {
       <Header
         search={search}
         onSearchChange={setSearch}
+        onOpenCart={openCartDrawer}
         onSelectProduct={(p) => router.push(`/producto/${p.id}`)}
       />
 
@@ -333,16 +340,6 @@ export default function PublicProductPage() {
             {/* Header info */}
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                {product.codigoInterno && (
-                  <span className="rounded-md bg-muted px-2.5 py-1 font-mono text-[11px] font-semibold text-muted-foreground">
-                    #{product.codigoInterno}
-                  </span>
-                )}
-                {product.sku && product.sku !== product.codigoInterno && (
-                  <span className="rounded-md bg-muted px-2.5 py-1 font-mono text-[11px] text-muted-foreground">
-                    SKU: {product.sku}
-                  </span>
-                )}
                 {product.estado === "agotado" && (
                   <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-bold text-red-600">
                     Agotado
@@ -572,6 +569,31 @@ export default function PublicProductPage() {
                     />
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Admin-only reference code */}
+            {isAdmin && (product.codigoInterno || product.sku) && (
+              <div className="rounded-2xl border border-dashed border-border bg-gray-50 p-4 text-xs text-muted-foreground">
+                <p className="mb-1 font-semibold uppercase tracking-wide">
+                  Referencia interna
+                </p>
+                {product.codigoInterno && (
+                  <p>
+                    Código:{" "}
+                    <span className="font-mono font-medium text-foreground">
+                      {product.codigoInterno}
+                    </span>
+                  </p>
+                )}
+                {product.sku && product.sku !== product.codigoInterno && (
+                  <p className="mt-0.5">
+                    SKU:{" "}
+                    <span className="font-mono font-medium text-foreground">
+                      {product.sku}
+                    </span>
+                  </p>
+                )}
               </div>
             )}
 

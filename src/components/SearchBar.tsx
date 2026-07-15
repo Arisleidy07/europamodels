@@ -31,7 +31,7 @@ export function SearchBar({
   value,
   onChange,
   onSelectProduct,
-  placeholder = "Buscar productos, marcas, códigos...",
+  placeholder = "Buscar productos",
   className,
 }: SearchBarProps) {
   const { products } = useCatalogData();
