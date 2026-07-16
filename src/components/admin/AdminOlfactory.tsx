@@ -29,7 +29,6 @@ import {
   uploadOlfactoryImage,
   deleteOlfactoryImage,
   INITIAL_OLFACTORY_DATA,
-  deduplicateOlfactoryNotes,
   normalizeSearch,
 } from "@/lib/olfactory";
 import { cn } from "@/lib/utils";
@@ -91,7 +90,6 @@ export default function AdminOlfactory() {
   const [editingNote, setEditingNote] = useState<OlfactoryNote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<OlfactoryNote | null>(null);
   const [seeding, setSeeding] = useState(false);
-  const [deduping, setDeduping] = useState(false);
 
   const loadNotes = async () => {
     try {
@@ -129,51 +127,6 @@ export default function AdminOlfactory() {
     };
     init();
   }, []);
-
-  const handleSeed = async () => {
-    setSeeding(true);
-    try {
-      let count = 0;
-      for (const item of INITIAL_OLFACTORY_DATA) {
-        const exists = notes.find(
-          (n) =>
-            normalizeSearch(n.nombre) === normalizeSearch(item.nombre) &&
-            n.categoria === item.categoria,
-        );
-        if (!exists) {
-          await createOlfactoryNote(item);
-          count++;
-        }
-      }
-      await loadNotes();
-      toast.success(
-        count > 0
-          ? `${count} elementos agregados`
-          : "Biblioteca ya está completa",
-      );
-    } catch (err: any) {
-      toast.error(err.message || "Error al inicializar");
-    } finally {
-      setSeeding(false);
-    }
-  };
-
-  const handleDeduplicate = async () => {
-    setDeduping(true);
-    try {
-      const removed = await deduplicateOlfactoryNotes();
-      await loadNotes();
-      toast.success(
-        removed > 0
-          ? `${removed} duplicados eliminados`
-          : "Sin duplicados encontrados",
-      );
-    } catch (err: any) {
-      toast.error(err.message || "Error al deduplicar");
-    } finally {
-      setDeduping(false);
-    }
-  };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
@@ -286,36 +239,6 @@ export default function AdminOlfactory() {
           )}
         </div>
         <div className="flex gap-2">
-          {(seeding || deduping) && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              {seeding
-                ? "Completando biblioteca..."
-                : "Eliminando duplicados..."}
-            </div>
-          )}
-          {!isEmpty && !seeding && !deduping && (
-            <Button
-              variant="outline"
-              onClick={handleSeed}
-              disabled={seeding}
-              size="sm"
-              title="Agrega elementos faltantes sin crear duplicados"
-            >
-              Completar biblioteca
-            </Button>
-          )}
-          {!isEmpty && !seeding && !deduping && (
-            <Button
-              variant="outline"
-              onClick={handleDeduplicate}
-              disabled={deduping}
-              size="sm"
-              title="Elimina entradas duplicadas"
-            >
-              Deduplicar
-            </Button>
-          )}
           <Button
             onClick={() => {
               setEditingNote(null);
@@ -329,7 +252,7 @@ export default function AdminOlfactory() {
 
       {/* Grid */}
       {loading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {Array.from({ length: 12 }).map((_, i) => (
             <div
               key={i}
@@ -417,7 +340,7 @@ export default function AdminOlfactory() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {filteredNotes.map((note) => (
             <div
               key={note.id}

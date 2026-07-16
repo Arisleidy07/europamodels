@@ -17,6 +17,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   Droplets,
   Wind,
   Heart,
@@ -96,7 +97,10 @@ export default function PublicProductPage() {
     );
   }
 
-  if (!product) {
+  if (
+    !product ||
+    (!isAdmin && (product.estado === "borrador" || product.estado === "oculto"))
+  ) {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-white px-6 text-center">
         <h1 className="text-2xl font-bold text-foreground">
@@ -195,13 +199,17 @@ export default function PublicProductPage() {
       {/* Breadcrumb — desktop only */}
       <div className="hidden border-b border-border bg-white sm:block">
         <div className="mx-auto flex max-w-7xl items-center px-6 py-2.5 lg:px-10">
+          <button
+            onClick={() => router.push("/catalogo")}
+            className="mr-3 flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted"
+            aria-label="Volver al catálogo"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </button>
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <button
-              onClick={() => router.push("/catalogo")}
-              className="transition-colors hover:text-foreground"
-            >
+            <span className="transition-colors hover:text-foreground">
               Catálogo
-            </button>
+            </span>
             <ChevronRight className="h-3.5 w-3.5" />
             {product.categoria && (
               <>
@@ -218,7 +226,14 @@ export default function PublicProductPage() {
 
       {/* Main content */}
       <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
-        <div className="grid gap-6 lg:grid-cols-2 lg:gap-10 xl:grid-cols-[1fr_480px]">
+        <button
+          onClick={() => router.push("/catalogo")}
+          className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground transition-colors hover:text-primary sm:hidden"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Volver al catálogo
+        </button>
+        <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] lg:gap-10 xl:grid-cols-[1.25fr_440px]">
           {/* ── Left: Gallery ── */}
           <div className="space-y-3">
             {/* Main image */}

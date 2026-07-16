@@ -11,8 +11,8 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: "hsl(221, 83%, 53%)",
-          foreground: "hsl(0, 0%, 100%)",
+          DEFAULT: "hsl(var(--primary) / <alpha-value>)",
+          foreground: "hsl(var(--primary-foreground) / <alpha-value>)",
           50: "hsl(221, 100%, 97%)",
           100: "hsl(221, 100%, 92%)",
           200: "hsl(221, 100%, 84%)",
@@ -24,11 +24,11 @@ const config: Config = {
           800: "hsl(221, 83%, 30%)",
           900: "hsl(221, 83%, 23%)",
         },
-        background: "hsl(0, 0%, 100%)",
-        foreground: "hsl(0, 0%, 8%)",
-        muted: "hsl(220, 14%, 96%)",
-        "muted-foreground": "hsl(220, 9%, 46%)",
-        border: "hsl(220, 13%, 91%)",
+        background: "hsl(var(--background) / <alpha-value>)",
+        foreground: "hsl(var(--foreground) / <alpha-value>)",
+        muted: "hsl(var(--muted) / <alpha-value>)",
+        "muted-foreground": "hsl(var(--muted-foreground) / <alpha-value>)",
+        border: "hsl(var(--border) / <alpha-value>)",
         success: "hsl(142, 76%, 36%)",
         danger: "hsl(0, 84%, 60%)",
         warning: "hsl(38, 92%, 50%)",

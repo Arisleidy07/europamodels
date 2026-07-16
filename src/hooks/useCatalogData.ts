@@ -8,16 +8,19 @@ import {
   getCategories,
   getSubcategories,
   getBrands,
+  getGenders,
   saveProducts,
   saveCategories,
   saveSubcategories,
   saveBrands,
+  saveGenders,
 } from "@/lib/localDb";
 import type {
   Product,
   Category,
   Subcategory,
   Brand,
+  Gender,
   ProductWithRelations,
 } from "@/types";
 
@@ -26,6 +29,7 @@ export function useCatalogData() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
+  const [genders, setGenders] = useState<Gender[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Track optimistically deleted IDs so stale cache snapshots can't restore them
@@ -35,12 +39,14 @@ export function useCatalogData() {
   const latestCats = useRef<Category[]>([]);
   const latestSubs = useRef<Subcategory[]>([]);
   const latestBrs = useRef<Brand[]>([]);
+  const latestGenders = useRef<Gender[]>([]);
 
   const combine = useCallback(() => {
     const prods = latestProds.current;
     const cats = latestCats.current;
     const subs = latestSubs.current;
     const brs = latestBrs.current;
+    const genders = latestGenders.current;
 
     const withRelations = prods.map((p) => ({
       ...p,
@@ -53,6 +59,7 @@ export function useCatalogData() {
     setCategories([...cats].sort((a, b) => a.orden - b.orden));
     setSubcategories([...subs].sort((a, b) => a.orden - b.orden));
     setBrands([...brs].sort((a, b) => a.orden - b.orden));
+    setGenders([...genders].sort((a, b) => a.orden - b.orden));
   }, []);
 
   useEffect(() => {
@@ -62,16 +69,18 @@ export function useCatalogData() {
     let unsubBrands = () => {};
 
     const loadLocal = async () => {
-      const [lp, lc, ls, lb] = await Promise.all([
+      const [lp, lc, ls, lb, lg] = await Promise.all([
         getProducts(),
         getCategories(),
         getSubcategories(),
         getBrands(),
+        getGenders(),
       ]);
       latestProds.current = lp;
       latestCats.current = lc;
       latestSubs.current = ls;
       latestBrs.current = lb;
+      latestGenders.current = lg;
       combine();
       setLoading(false);
     };
@@ -80,6 +89,8 @@ export function useCatalogData() {
 
     const firestore = getFirebaseDb();
     if (!firestore) return () => {};
+
+    let unsubGenders = () => {};
 
     try {
       unsubProducts = onSnapshot(collection(firestore, "products"), (snap) => {
@@ -121,6 +132,15 @@ export function useCatalogData() {
         saveBrands(data);
         combine();
       });
+
+      unsubGenders = onSnapshot(collection(firestore, "genders"), (snap) => {
+        const data = snap.docs.map(
+          (d) => ({ id: d.id, ...d.data() }) as Gender,
+        );
+        latestGenders.current = data;
+        saveGenders(data);
+        combine();
+      });
     } catch {
       // Offline: local data is already loaded
     }
@@ -130,6 +150,7 @@ export function useCatalogData() {
       unsubCategories();
       unsubSubcategories();
       unsubBrands();
+      unsubGenders();
     };
   }, [combine]);
 
@@ -142,5 +163,23 @@ export function useCatalogData() {
     [combine],
   );
 
-  return { products, categories, subcategories, brands, loading, markDeleted };
+  const removeBrand = useCallback(
+    (id: string) => {
+      latestBrs.current = latestBrs.current.filter((brand) => brand.id !== id);
+      saveBrands(latestBrs.current);
+      combine();
+    },
+    [combine],
+  );
+
+  return {
+    products,
+    categories,
+    subcategories,
+    brands,
+    genders,
+    loading,
+    markDeleted,
+    removeBrand,
+  };
 }

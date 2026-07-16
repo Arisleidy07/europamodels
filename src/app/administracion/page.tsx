@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,6 +30,8 @@ import AdminTeam from "@/components/admin/AdminTeam";
 import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
 import AdminOlfactory from "@/components/admin/AdminOlfactory";
+import AdminGenders from "@/components/admin/AdminGenders";
+import AdminSubcategories from "@/components/admin/AdminSubcategories";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
 import { deleteProduct } from "@/lib/products";
@@ -40,8 +42,15 @@ import type { Product } from "@/types";
 export default function AdminPage() {
   const router = useRouter();
   const { user, hasPermission } = useAuth();
-  const { products, categories, subcategories, brands, loading, markDeleted } =
-    useCatalogData();
+  const {
+    products,
+    categories,
+    subcategories,
+    brands,
+    genders,
+    loading,
+    markDeleted,
+  } = useCatalogData();
 
   const tabs = [
     { id: "productos", label: "Productos", icon: Package, visible: true },
@@ -62,6 +71,24 @@ export default function AdminPage() {
         hasPermission("marcas", "crear") ||
         hasPermission("marcas", "editar") ||
         hasPermission("marcas", "eliminar"),
+    },
+    {
+      id: "generos",
+      label: "Géneros",
+      icon: Users,
+      visible:
+        user?.rol === "administrador" ||
+        hasPermission("productos", "crear") ||
+        hasPermission("productos", "editar"),
+    },
+    {
+      id: "subcategorias",
+      label: "Subcategorías",
+      icon: LayoutGrid,
+      visible:
+        hasPermission("categorias", "crear") ||
+        hasPermission("categorias", "editar") ||
+        hasPermission("categorias", "eliminar"),
     },
     {
       id: "biblioteca",
@@ -106,6 +133,7 @@ export default function AdminPage() {
   }, [tabs, activeTab]);
 
   const [search, setSearch] = useState("");
+  const [stateFilter, setStateFilter] = useState<string>("todos");
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -153,21 +181,22 @@ export default function AdminPage() {
 
   const filteredProducts = products.filter((p) => {
     const term = normalizeText(search);
-    return (
+    const matchesSearch =
       !term ||
       normalizeText(p.nombre).includes(term) ||
       normalizeText(p.marca?.nombre || "").includes(term) ||
-      normalizeText(p.categoria?.nombre || "").includes(term)
-    );
+      normalizeText(p.categoria?.nombre || "").includes(term);
+    const matchesState = stateFilter === "todos" || p.estado === stateFilter;
+    return matchesSearch && matchesState;
   });
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const target = deleteTarget;
     setDeleteTarget(null);
-    markDeleted(target.id); // optimistic — remove immediately
     try {
       await deleteProduct(target.id);
+      markDeleted(target.id);
       toast.success("Producto eliminado");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
@@ -224,14 +253,38 @@ export default function AdminPage() {
 
           {activeTab === "productos" && (
             <div className="space-y-4">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar productos"
-                  className="pl-10"
-                />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar productos"
+                    className="pl-10"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { value: "todos", label: "Todos" },
+                    { value: "publicado", label: "Publicado" },
+                    { value: "borrador", label: "Borrador" },
+                    { value: "oculto", label: "Oculto" },
+                    { value: "agotado", label: "Agotado" },
+                  ].map((s) => (
+                    <button
+                      key={s.value}
+                      onClick={() => setStateFilter(s.value)}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+                        stateFilter === s.value
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-white text-foreground hover:bg-muted",
+                      )}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {loading ? (
@@ -379,6 +432,8 @@ export default function AdminPage() {
 
           {activeTab === "categorias" && <AdminCategories />}
           {activeTab === "marcas" && <AdminBrands />}
+          {activeTab === "generos" && <AdminGenders />}
+          {activeTab === "subcategorias" && <AdminSubcategories />}
           {activeTab === "biblioteca" && <AdminOlfactory />}
           {activeTab === "cotizaciones" && <AdminQuotes />}
           {activeTab === "equipo" && <AdminTeam />}
@@ -460,6 +515,7 @@ export default function AdminPage() {
               categories={categories}
               subcategories={subcategories}
               brands={brands}
+              genders={genders}
               onClose={() => setProductFormOpen(false)}
               onSaved={() => {
                 toast.success("Catálogo actualizado");

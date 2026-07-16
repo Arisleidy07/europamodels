@@ -35,7 +35,10 @@ import {
   deleteCategory,
   createBrand,
   deleteBrand,
+  createSubcategory,
+  deleteSubcategory,
 } from "@/lib/categories";
+import { createGender, deleteGender } from "@/lib/genders";
 import { useAuth } from "@/context/AuthContext";
 import { generateId, cn } from "@/lib/utils";
 import {
@@ -52,6 +55,7 @@ import type {
   Category,
   Subcategory,
   Brand,
+  Gender,
 } from "@/types";
 
 const PRESET_COLORS = [
@@ -65,6 +69,160 @@ const PRESET_COLORS = [
   "#be123c",
 ];
 
+function QuickSubcategoryModal({
+  open,
+  onClose,
+  categories,
+  subcategories,
+  currentCategoryId,
+  onCreated,
+  onDelete,
+}: {
+  open: boolean;
+  onClose: () => void;
+  categories: { id: string; nombre: string }[];
+  subcategories: { id: string; nombre: string; categoriaId: string }[];
+  currentCategoryId?: string;
+  onCreated: (name: string, categoryId: string) => Promise<void>;
+  onDelete: (id: string) => Promise<void>;
+}) {
+  const [name, setName] = React.useState("");
+  const [categoryId, setCategoryId] = React.useState(currentCategoryId || "");
+  const [saving, setSaving] = React.useState(false);
+  const [confirmTarget, setConfirmTarget] = React.useState<{
+    id: string;
+    nombre: string;
+  } | null>(null);
+
+  React.useEffect(() => {
+    if (open) {
+      setName("");
+      setCategoryId(currentCategoryId || "");
+    }
+  }, [open, currentCategoryId]);
+
+  const handleSubmit = async () => {
+    if (!name.trim() || !categoryId) return;
+    setSaving(true);
+    try {
+      await onCreated(name.trim(), categoryId);
+      setName("");
+      onClose();
+    } catch (err: any) {
+      toast.error(err.message || "Error al crear");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const executeDelete = async () => {
+    if (!confirmTarget) return;
+    try {
+      await onDelete(confirmTarget.id);
+    } catch (err: any) {
+      toast.error(err.message || "Error al eliminar");
+    } finally {
+      setConfirmTarget(null);
+    }
+  };
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <h2 className="mb-4 text-lg font-bold text-foreground">
+          Subcategorías
+        </h2>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-foreground">
+              Categoría
+            </label>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary"
+            >
+              <option value="">Seleccionar categoría</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-foreground">
+              Nombre
+            </label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+              placeholder="Nueva subcategoría"
+              autoFocus
+              className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+          <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border p-2">
+            {subcategories.map((s) => {
+              const cat = categories.find((c) => c.id === s.categoriaId);
+              return (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between rounded-lg px-2 py-1.5 hover:bg-muted"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {s.nombre}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {cat?.nombre || "—"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmTarget(s)}
+                    className="rounded p-1 text-danger hover:bg-red-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-xl border border-border px-5 py-2.5 text-sm font-medium text-muted-foreground hover:bg-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving || !name.trim() || !categoryId}
+              className="rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 disabled:opacity-50"
+            >
+              {saving ? "Creando..." : "Crear subcategoría"}
+            </button>
+          </div>
+        </div>
+      </div>
+      <ConfirmModal
+        open={!!confirmTarget}
+        title="Confirmar eliminación"
+        message={`¿Eliminar "${confirmTarget?.nombre}"?`}
+        confirmLabel="Eliminar"
+        onConfirm={executeDelete}
+        onCancel={() => setConfirmTarget(null)}
+      />
+    </div>
+  );
+}
+
 function QuickManageModal({
   title,
   open,
@@ -72,6 +230,7 @@ function QuickManageModal({
   items,
   onCreated,
   onDelete,
+  showColors = true,
 }: {
   title: string;
   open: boolean;
@@ -79,6 +238,7 @@ function QuickManageModal({
   items: { id: string; nombre: string; color?: string }[];
   onCreated: (name: string, color: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  showColors?: boolean;
 }) {
   const [name, setName] = React.useState("");
   const [color, setColor] = React.useState(PRESET_COLORS[0]);
@@ -195,38 +355,40 @@ function QuickManageModal({
               className="w-full rounded-xl border border-border bg-white px-4 py-3 text-base outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
             />
           </div>
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-foreground">
-              Color de identificación
-            </label>
-            <div className="flex flex-wrap gap-3">
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={cn(
-                    "h-9 w-9 rounded-full border-2 transition-all hover:scale-110",
-                    color === c
-                      ? "border-foreground scale-110 shadow-md"
-                      : "border-transparent",
-                  )}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-            {color && (
-              <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-4 py-2.5">
-                <div
-                  className="h-5 w-5 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-                <span className="text-sm font-medium text-foreground">
-                  {name || "Vista previa"}
-                </span>
+          {showColors && (
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-foreground">
+                Color de identificación
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setColor(c)}
+                    className={cn(
+                      "h-9 w-9 rounded-full border-2 transition-all hover:scale-110",
+                      color === c
+                        ? "border-foreground scale-110 shadow-md"
+                        : "border-transparent",
+                    )}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
               </div>
-            )}
-          </div>
+              {color && (
+                <div className="mt-3 flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-4 py-2.5">
+                  <div
+                    className="h-5 w-5 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-sm font-medium text-foreground">
+                    {name || "Vista previa"}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex justify-end gap-3 pt-1">
             <button
               type="button"
@@ -1104,6 +1266,7 @@ interface ProductFormProps {
   categories: Category[];
   subcategories: Subcategory[];
   brands: Brand[];
+  genders: Gender[];
   onClose: () => void;
   onSaved: () => void;
 }
@@ -1121,7 +1284,7 @@ const initialProduct: Partial<Product> = {
   marcaId: "",
   categoriaId: "",
   subcategoriaId: "",
-  genero: "unisex",
+  genero: "",
   precio: 0,
   precioOferta: undefined,
   stock: 0,
@@ -1203,6 +1366,7 @@ export function ProductForm({
   categories,
   subcategories,
   brands,
+  genders,
   onClose,
   onSaved,
 }: ProductFormProps) {
@@ -1252,7 +1416,12 @@ export function ProductForm({
   const [dragging, setDragging] = useState<string | null>(null);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [showNewBrand, setShowNewBrand] = useState(false);
+  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
+  const [showNewGender, setShowNewGender] = useState(false);
   const [olfactoryNotes, setOlfactoryNotes] = useState<OlfactoryNote[]>([]);
+  const [formErrors, setFormErrors] = useState<
+    { section: string; message: string }[]
+  >([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -1330,17 +1499,59 @@ export function ProductForm({
     }));
   };
 
+  const validate = () => {
+    const errors: { section: string; message: string }[] = [];
+    if (!form.nombre?.trim())
+      errors.push({
+        section: "info",
+        message: "El nombre del producto es requerido",
+      });
+    if (!form.descripcion?.trim())
+      errors.push({ section: "info", message: "La descripción es requerida" });
+    if (!form.marcaId)
+      errors.push({
+        section: "clasificacion",
+        message: "Selecciona una marca",
+      });
+    if (!form.categoriaId)
+      errors.push({
+        section: "clasificacion",
+        message: "Selecciona una categoría",
+      });
+    if (!form.genero)
+      errors.push({
+        section: "clasificacion",
+        message: "Selecciona un género",
+      });
+    if (form.precio === undefined || form.precio <= 0)
+      errors.push({
+        section: "precio",
+        message: "Ingresa un precio válido mayor a 0",
+      });
+    if (form.stock === undefined || form.stock < 0)
+      errors.push({
+        section: "precio",
+        message: "El stock no puede ser negativo",
+      });
+    if (images.length === 0)
+      errors.push({
+        section: "imagenes",
+        message: "Agrega al menos una imagen del producto",
+      });
+    return errors;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (
-      !form.nombre ||
-      !form.categoriaId ||
-      !form.marcaId ||
-      form.precio === undefined
-    ) {
-      toast.error("Completa los campos requeridos");
+    const errors = validate();
+    if (errors.length > 0) {
+      setFormErrors(errors);
+      toast.error(`Revisa ${errors.length} campo(s) antes de guardar`);
+      const section = document.getElementById(`section-${errors[0].section}`);
+      section?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
+    setFormErrors([]);
 
     setLoading(true);
     try {
@@ -1482,17 +1693,30 @@ export function ProductForm({
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar nav — hidden on mobile */}
         <nav className="hidden w-52 shrink-0 flex-col gap-0.5 overflow-y-auto border-r border-border bg-gray-50/80 p-3 lg:flex">
-          {SECTIONS.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => scrollTo(s.id)}
-              className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-all hover:bg-white hover:shadow-sm"
-            >
-              <span className="text-base leading-none">{s.icon}</span>
-              <span className="font-medium">{s.label}</span>
-            </button>
-          ))}
+          {SECTIONS.map((s) => {
+            const sectionErrors = formErrors.filter((e) => e.section === s.id);
+            return (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => scrollTo(s.id)}
+                className={cn(
+                  "flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-all hover:bg-white hover:shadow-sm",
+                  sectionErrors.length > 0
+                    ? "bg-red-50/70 text-red-700"
+                    : "text-foreground",
+                )}
+              >
+                <span className="text-base leading-none">{s.icon}</span>
+                <span className="font-medium">{s.label}</span>
+                {sectionErrors.length > 0 && (
+                  <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
+                    {sectionErrors.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
           <div className="mt-4 px-3">
             <Button
               size="sm"
@@ -1508,6 +1732,26 @@ export function ProductForm({
         {/* Main form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="space-y-0 divide-y divide-border">
+            {formErrors.length > 0 && (
+              <div className="mx-6 mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-semibold text-red-800">
+                  Revisa los siguientes campos antes de guardar:
+                </p>
+                <ul className="mt-2 space-y-1">
+                  {formErrors.map((err, idx) => (
+                    <li key={idx}>
+                      <button
+                        type="button"
+                        onClick={() => scrollTo(err.section)}
+                        className="text-sm text-red-700 underline hover:text-red-900"
+                      >
+                        {err.message}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             {/* ── Información principal ── */}
             <section id="section-info" className="px-6 py-7">
               <SectionHeader label="Información principal" icon="📝" />
@@ -1617,45 +1861,64 @@ export function ProductForm({
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
                     Subcategoría
                   </label>
-                  <select
-                    value={form.subcategoriaId || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, subcategoriaId: e.target.value })
-                    }
-                    className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none focus:border-primary"
-                  >
-                    <option value="">Sin subcategoría</option>
-                    {filteredSubcategories.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nombre}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-start gap-2">
+                    <select
+                      value={form.subcategoriaId || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, subcategoriaId: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none focus:border-primary"
+                    >
+                      <option value="">Sin subcategoría</option>
+                      {filteredSubcategories.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewSubcategory(true)}
+                      className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/5"
+                      title="Nueva subcategoría"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
                     Género
                   </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {(["unisex", "hombre", "mujer", "ninos"] as const).map(
-                      (g) => (
-                        <button
-                          key={g}
-                          type="button"
-                          onClick={() => setForm({ ...form, genero: g })}
-                          className={cn(
-                            "rounded-lg border py-2 text-xs font-medium capitalize transition-all",
-                            form.genero === g
-                              ? "border-primary bg-primary/10 text-primary"
-                              : "border-border text-foreground hover:border-primary/30",
-                          )}
-                        >
-                          {g === "ninos"
-                            ? "Niños"
-                            : g.charAt(0).toUpperCase() + g.slice(1)}
-                        </button>
-                      ),
-                    )}
+                  <div className="flex items-start gap-2">
+                    <select
+                      value={form.genero || ""}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          genero: e.target.value || undefined,
+                        })
+                      }
+                      className="w-full rounded-xl border border-border bg-white px-4 py-2.5 text-sm outline-none focus:border-primary"
+                    >
+                      <option value="">Sin género</option>
+                      {genders
+                        .filter((g) => g.activo)
+                        .sort((a, b) => a.orden - b.orden)
+                        .map((g) => (
+                          <option key={g.id} value={g.nombre}>
+                            {g.nombre}
+                          </option>
+                        ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => setShowNewGender(true)}
+                      className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-white px-3 py-2.5 text-sm font-medium text-primary hover:bg-primary/5"
+                      title="Nuevo género"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -2243,6 +2506,54 @@ export function ProductForm({
           await deleteBrand(id);
           if (form.marcaId === id) {
             setForm((prev) => ({ ...prev, marcaId: "" }));
+          }
+        }}
+      />
+
+      <QuickManageModal
+        title="Géneros"
+        open={showNewGender}
+        onClose={() => setShowNewGender(false)}
+        items={genders}
+        showColors={false}
+        onCreated={async (name) => {
+          const created = await createGender({
+            nombre: name,
+            orden: genders.length + 1,
+            activo: true,
+          });
+          setForm((prev) => ({ ...prev, genero: created.nombre }));
+          toast.success("Género creado");
+        }}
+        onDelete={async (id) => {
+          await deleteGender(id);
+          const removed = genders.find((g) => g.id === id);
+          if (removed && form.genero === removed.nombre) {
+            setForm((prev) => ({ ...prev, genero: "" }));
+          }
+        }}
+      />
+
+      <QuickSubcategoryModal
+        open={showNewSubcategory}
+        onClose={() => setShowNewSubcategory(false)}
+        categories={categories}
+        subcategories={subcategories}
+        currentCategoryId={form.categoriaId}
+        onCreated={async (name, categoryId) => {
+          const created = await createSubcategory({
+            nombre: name,
+            categoriaId: categoryId,
+            orden: subcategories.length + 1,
+            activo: true,
+          });
+          setForm((prev) => ({ ...prev, subcategoriaId: created.id }));
+          toast.success("Subcategoría creada");
+        }}
+        onDelete={async (id) => {
+          await deleteSubcategory(id);
+          if (form.subcategoriaId === id) {
+            setForm((prev) => ({ ...prev, subcategoriaId: "" }));
           }
         }}
       />

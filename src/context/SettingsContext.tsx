@@ -6,6 +6,29 @@ import { getFirebaseDb } from "@/lib/firebase";
 import { getSettings, saveSettings } from "@/lib/localDb";
 import type { AppSettings } from "@/types";
 
+function hexToHsl(hex: string): string | null {
+  const normalized = hex.replace("#", "");
+  if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
+  const red = parseInt(normalized.slice(0, 2), 16) / 255;
+  const green = parseInt(normalized.slice(2, 4), 16) / 255;
+  const blue = parseInt(normalized.slice(4, 6), 16) / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const lightness = (max + min) / 2;
+  const delta = max - min;
+  const saturation =
+    delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+  let hue = 0;
+  if (delta !== 0) {
+    if (max === red) hue = ((green - blue) / delta) % 6;
+    else if (max === green) hue = (blue - red) / delta + 2;
+    else hue = (red - green) / delta + 4;
+  }
+  hue = Math.round(hue * 60);
+  if (hue < 0) hue += 360;
+  return `${hue} ${Math.round(saturation * 100)}% ${Math.round(lightness * 100)}%`;
+}
+
 const defaultSettings: AppSettings = {
   empresa: {
     nombre: "Europa Models",
@@ -74,7 +97,22 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
         doc(firestore, "settings", "main"),
         (snap) => {
           if (snap.exists()) {
-            const data = { ...defaultSettings, ...snap.data() } as AppSettings;
+            const persisted = snap.data() as Partial<AppSettings>;
+            const data: AppSettings = {
+              ...defaultSettings,
+              ...persisted,
+              empresa: { ...defaultSettings.empresa, ...persisted.empresa },
+              catalogo: { ...defaultSettings.catalogo, ...persisted.catalogo },
+              cotizaciones: {
+                ...defaultSettings.cotizaciones,
+                ...persisted.cotizaciones,
+              },
+              apariencia: {
+                ...defaultSettings.apariencia,
+                ...persisted.apariencia,
+              },
+              inicio: { ...defaultSettings.inicio, ...persisted.inicio },
+            };
             setSettings(data);
             saveSettings(data);
           }
@@ -89,6 +127,19 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     setup();
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const primary = hexToHsl(settings.apariencia.colorPrincipal);
+    const background = hexToHsl(settings.apariencia.colorSecundario);
+    if (primary) root.style.setProperty("--primary", primary);
+    if (settings.apariencia.modoOscuro) {
+      root.style.removeProperty("--background");
+    } else if (background) {
+      root.style.setProperty("--background", background);
+    }
+    root.classList.toggle("dark", settings.apariencia.modoOscuro);
+  }, [settings.apariencia]);
 
   const suspended = settings.licenseStatus === "suspended";
 

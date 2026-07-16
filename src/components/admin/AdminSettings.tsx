@@ -1,7 +1,16 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Save, Loader2, Upload, Trash2, Video, Monitor } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Save,
+  Loader2,
+  Upload,
+  Trash2,
+  Video,
+  Monitor,
+  RefreshCw,
+  Palette,
+} from "lucide-react";
 import {
   ref,
   uploadBytes,
@@ -21,7 +30,14 @@ export default function AdminSettings() {
   const [form, setForm] = useState({ ...settings });
   const [saving, setSaving] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [replaceVideoIndex, setReplaceVideoIndex] = useState<number | null>(
+    null,
+  );
   const videoInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setForm({ ...settings });
+  }, [settings]);
 
   const handleChange = (
     path: string,
@@ -70,14 +86,23 @@ export default function AdminSettings() {
         const storageRef = ref(storage, fileName);
         await uploadBytes(storageRef, file);
         const url = await getDownloadURL(storageRef);
-        newVideos.push(url);
+        if (replaceVideoIndex !== null && i === 0) {
+          newVideos[replaceVideoIndex] = url;
+        } else {
+          newVideos.push(url);
+        }
       }
       handleChange("inicio.videos", newVideos);
-      toast.success(`${files.length} video(s) subido(s)`);
+      toast.success(
+        replaceVideoIndex !== null
+          ? "Video reemplazado"
+          : `${files.length} video(s) subido(s)`,
+      );
     } catch (err: any) {
       toast.error(err.message || "Error al subir video");
     } finally {
       setUploadingVideo(false);
+      setReplaceVideoIndex(null);
       if (videoInputRef.current) videoInputRef.current.value = "";
     }
   };
@@ -130,8 +155,33 @@ export default function AdminSettings() {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border bg-gradient-to-br from-white to-primary/[0.04] p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">
+            Administración
+          </p>
+          <h2 className="mt-1 text-xl font-bold text-foreground">
+            Configuración de la plataforma
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Personaliza la experiencia del catálogo y la pantalla de inicio.
+          </p>
+        </div>
+        <Button onClick={handleSubmit} disabled={saving} className="shrink-0">
+          {saving ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Save className="mr-2 h-4 w-4" />
+          )}
+          Guardar cambios
+        </Button>
+      </div>
+
       <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-        <h3 className="mb-4 text-lg font-bold">Empresa</h3>
+        <h3 className="mb-1 text-lg font-bold">Empresa</h3>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Información visible en el encabezado y las comunicaciones.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Input
             label="Nombre de la empresa"
@@ -184,25 +234,54 @@ export default function AdminSettings() {
           inicio.
         </p>
 
-        <div className="space-y-3">
-          {(form.inicio.videos || []).map((url: string, idx: number) => (
-            <div
-              key={idx}
-              className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3"
-            >
-              <Video className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate text-sm">
-                Video {idx + 1}
-              </span>
-              <button
-                onClick={() => handleRemoveVideo(idx)}
-                className="rounded-lg p-1.5 text-danger hover:bg-red-50"
+        {(form.inicio.videos || []).length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {(form.inicio.videos || []).map((url: string, idx: number) => (
+              <article
+                key={url}
+                className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
               >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
-        </div>
+                <video
+                  src={url}
+                  controls
+                  preload="metadata"
+                  className="aspect-video w-full bg-slate-950 object-cover"
+                />
+                <div className="flex items-center justify-between gap-3 p-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground">
+                      Video {idx + 1}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      Fondo de inicio
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplaceVideoIndex(idx);
+                        videoInputRef.current?.click();
+                      }}
+                      className="rounded-lg p-2 text-primary transition-colors hover:bg-primary/10"
+                      title="Reemplazar video"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveVideo(idx)}
+                      className="rounded-lg p-2 text-danger transition-colors hover:bg-red-50"
+                      title="Eliminar video"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
 
         <input
           ref={videoInputRef}
@@ -260,6 +339,44 @@ export default function AdminSettings() {
             label="Mostrar categoría"
             checked={form.catalogo.mostrarCategoria}
             onChange={(v) => handleChange("catalogo.mostrarCategoria", v)}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <Palette className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-bold">Apariencia</h3>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <label className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <span className="text-sm font-medium">Color principal</span>
+            <input
+              type="color"
+              value={form.apariencia.colorPrincipal}
+              onChange={(e) =>
+                handleChange("apariencia.colorPrincipal", e.target.value)
+              }
+              className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
+              aria-label="Color principal"
+            />
+          </label>
+          <label className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <span className="text-sm font-medium">Color secundario</span>
+            <input
+              type="color"
+              value={form.apariencia.colorSecundario}
+              onChange={(e) =>
+                handleChange("apariencia.colorSecundario", e.target.value)
+              }
+              className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
+              aria-label="Color secundario"
+            />
+          </label>
+          <Toggle
+            label="Modo oscuro"
+            checked={form.apariencia.modoOscuro}
+            onChange={(value) => handleChange("apariencia.modoOscuro", value)}
           />
         </div>
       </section>

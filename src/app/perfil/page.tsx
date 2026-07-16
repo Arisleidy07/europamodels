@@ -134,9 +134,24 @@ export default function ProfilePage() {
     }
   };
 
+  const passwordChecks = [
+    { label: "Al menos 8 caracteres", valid: newPass.length >= 8 },
+    { label: "Una letra mayúscula", valid: /[A-Z]/.test(newPass) },
+    { label: "Una letra minúscula", valid: /[a-z]/.test(newPass) },
+    { label: "Un número", valid: /\d/.test(newPass) },
+  ];
+  const passwordValid = passwordChecks.every((check) => check.valid);
+
+  const closePasswordModal = () => {
+    setShowPassSection(false);
+    setNewPass("");
+    setConfirmPass("");
+    setShowPass(false);
+  };
+
   const handleChangePassword = async () => {
-    if (newPass.length < 6) {
-      toast.error("Mínimo 6 caracteres");
+    if (!passwordValid) {
+      toast.error("La contraseña no cumple los requisitos de seguridad");
       return;
     }
     if (newPass !== confirmPass) {
@@ -147,9 +162,7 @@ export default function ProfilePage() {
     try {
       await changePassword(newPass);
       toast.success("Contraseña actualizada");
-      setNewPass("");
-      setConfirmPass("");
-      setShowPassSection(false);
+      closePasswordModal();
     } catch (err: any) {
       toast.error(err.message || "Error al cambiar contraseña");
     } finally {
@@ -315,80 +328,156 @@ export default function ProfilePage() {
             </div>
           </motion.div>
 
-          {/* Password Section */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8"
+            className="flex items-center justify-between rounded-3xl border border-border bg-white p-6 shadow-sm sm:p-8"
           >
-            <div className="flex items-center justify-between">
+            <div>
               <h2 className="text-lg font-bold text-foreground">Contraseña</h2>
-              {!showPassSection && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPassSection(true)}
-                >
-                  <Lock className="mr-2 h-4 w-4" /> Cambiar
-                </Button>
-              )}
+              <p className="mt-1 text-sm text-muted-foreground">
+                Actualiza tu contraseña para mantener tu cuenta protegida.
+              </p>
             </div>
-            {showPassSection && (
-              <div className="mt-5 space-y-4">
-                <div className="relative">
-                  <Input
-                    label="Nueva contraseña"
-                    type={showPass ? "text" : "password"}
-                    value={newPass}
-                    onChange={(e) => setNewPass(e.target.value)}
-                    placeholder="Mínimo 6 caracteres"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-[2.1rem] text-muted-foreground"
-                  >
-                    {showPass ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                <Input
-                  label="Confirmar contraseña"
-                  type={showPass ? "text" : "password"}
-                  value={confirmPass}
-                  onChange={(e) => setConfirmPass(e.target.value)}
-                  placeholder="Repite tu contraseña"
-                />
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowPassSection(false);
-                      setNewPass("");
-                      setConfirmPass("");
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleChangePassword}
-                    disabled={changingPass || !newPass || !confirmPass}
-                  >
-                    {changingPass && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Actualizar contraseña
-                  </Button>
-                </div>
-              </div>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPassSection(true)}
+            >
+              <Lock className="mr-2 h-4 w-4" /> Cambiar
+            </Button>
           </motion.div>
         </div>
       </main>
+
+      {showPassSection && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <button
+            type="button"
+            onClick={closePasswordModal}
+            className="absolute inset-0 bg-slate-950/45 backdrop-blur-sm"
+            aria-label="Cerrar cambio de contraseña"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="relative z-10 w-full max-w-md rounded-3xl border border-border bg-white p-6 shadow-2xl sm:p-8"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
+                  <Lock className="h-5 w-5 text-primary" />
+                </div>
+                <h2 className="mt-4 text-xl font-bold text-foreground">
+                  Cambiar contraseña
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Crea una contraseña segura y única para tu cuenta.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={closePasswordModal}
+                className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Cerrar"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <div className="relative">
+                <Input
+                  label="Nueva contraseña"
+                  type={showPass ? "text" : "password"}
+                  value={newPass}
+                  onChange={(e) => setNewPass(e.target.value)}
+                  placeholder="Escribe una contraseña segura"
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((value) => !value)}
+                  className="absolute right-3 top-[2.1rem] rounded p-1 text-muted-foreground hover:text-foreground"
+                  aria-label={
+                    showPass ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
+                >
+                  {showPass ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+
+              <div className="rounded-xl bg-muted/60 p-3">
+                <p className="mb-2 text-xs font-semibold text-foreground">
+                  Requisitos de seguridad
+                </p>
+                <div className="grid gap-1.5 sm:grid-cols-2">
+                  {passwordChecks.map((check) => (
+                    <p
+                      key={check.label}
+                      className={
+                        check.valid
+                          ? "text-xs text-success"
+                          : "text-xs text-muted-foreground"
+                      }
+                    >
+                      {check.valid ? "✓" : "○"} {check.label}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <Input
+                label="Confirmar contraseña"
+                type={showPass ? "text" : "password"}
+                value={confirmPass}
+                onChange={(e) => setConfirmPass(e.target.value)}
+                placeholder="Repite la nueva contraseña"
+                autoComplete="new-password"
+              />
+              {confirmPass && (
+                <p
+                  className={
+                    newPass === confirmPass
+                      ? "text-xs text-success"
+                      : "text-xs text-danger"
+                  }
+                >
+                  {newPass === confirmPass
+                    ? "Las contraseñas coinciden"
+                    : "Las contraseñas no coinciden"}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <Button
+                variant="outline"
+                onClick={closePasswordModal}
+                disabled={changingPass}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleChangePassword}
+                disabled={
+                  changingPass || !passwordValid || newPass !== confirmPass
+                }
+              >
+                {changingPass && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Actualizar contraseña
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

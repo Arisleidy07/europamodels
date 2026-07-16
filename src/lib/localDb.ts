@@ -1,5 +1,15 @@
 import { openDB, DBSchema, IDBPDatabase } from "idb";
-import type { Product, Category, Subcategory, Brand, Quote, AppSettings, CartItem, SyncQueueItem } from "@/types";
+import type {
+  Product,
+  Category,
+  Subcategory,
+  Brand,
+  Gender,
+  Quote,
+  AppSettings,
+  CartItem,
+  SyncQueueItem,
+} from "@/types";
 
 interface EuropaDB extends DBSchema {
   products: {
@@ -18,6 +28,10 @@ interface EuropaDB extends DBSchema {
   brands: {
     key: string;
     value: Brand;
+  };
+  genders: {
+    key: string;
+    value: Gender;
   };
   quotes: {
     key: string;
@@ -38,7 +52,7 @@ interface EuropaDB extends DBSchema {
 }
 
 const DB_NAME = "europa-models-db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBPDatabase<EuropaDB>> | null = null;
 
@@ -46,7 +60,9 @@ export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<EuropaDB>(DB_NAME, DB_VERSION, {
       upgrade(db) {
-        const productsStore = db.createObjectStore("products", { keyPath: "id" });
+        const productsStore = db.createObjectStore("products", {
+          keyPath: "id",
+        });
         productsStore.createIndex("by-category", "categoriaId");
         productsStore.createIndex("by-brand", "marcaId");
         productsStore.createIndex("by-status", "estado");
@@ -54,6 +70,9 @@ export function getDB() {
         db.createObjectStore("categories", { keyPath: "id" });
         db.createObjectStore("subcategories", { keyPath: "id" });
         db.createObjectStore("brands", { keyPath: "id" });
+        if (!db.objectStoreNames.contains("genders")) {
+          db.createObjectStore("genders", { keyPath: "id" });
+        }
         db.createObjectStore("quotes", { keyPath: "id" });
         db.createObjectStore("settings", { keyPath: "id" });
         db.createObjectStore("cart", { keyPath: "productoId" });
@@ -106,6 +125,17 @@ export async function saveBrands(brands: Brand[]) {
 export async function getBrands(): Promise<Brand[]> {
   const db = await getDB();
   return db.getAll("brands");
+}
+
+export async function saveGenders(genders: Gender[]) {
+  const db = await getDB();
+  const tx = db.transaction("genders", "readwrite");
+  await Promise.all([...genders.map((g) => tx.store.put(g)), tx.done]);
+}
+
+export async function getGenders(): Promise<Gender[]> {
+  const db = await getDB();
+  return db.getAll("genders");
 }
 
 export async function saveSettings(settings: AppSettings) {

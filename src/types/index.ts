@@ -83,6 +83,13 @@ export interface Brand {
   activo: boolean;
 }
 
+export interface Gender {
+  id: string;
+  nombre: string;
+  orden: number;
+  activo: boolean;
+}
+
 export type OlfactoryCategory =
   | "acordes"
   | "notasSalida"
@@ -104,7 +111,6 @@ export interface ProductAccord {
 }
 
 export type ProductStatus = "publicado" | "borrador" | "oculto" | "agotado";
-export type ProductGender = "hombre" | "mujer" | "unisex" | "ninos";
 
 export interface ProductVariant {
   id: string;
@@ -125,7 +131,7 @@ export interface Product {
   marcaId: string;
   categoriaId: string;
   subcategoriaId?: string;
-  genero?: ProductGender;
+  genero?: string;
   precio: number;
   precioOferta?: number;
   stock: number;

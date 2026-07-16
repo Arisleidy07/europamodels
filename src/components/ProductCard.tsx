@@ -45,14 +45,14 @@ export function ProductCard({ product, onClick, onAdd }: ProductCardProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
       whileHover={{ y: -6 }}
-      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm transition-all duration-300 hover:shadow-lg"
+      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/80 bg-white p-3 shadow-[0_2px_12px_rgba(15,23,42,0.05)] transition-all duration-300 hover:border-primary/20 hover:shadow-[0_16px_32px_rgba(15,23,42,0.13)]"
       onClick={onClick}
     >
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-gray-50">
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-gradient-to-br from-slate-50 via-white to-primary/[0.04]">
         <img
           src={imageUrl}
           alt={product.nombre}
-          className="h-full w-full object-contain p-4 transition-transform duration-500 group-hover:scale-110"
+          className="h-full w-full object-contain p-4 transition-transform duration-500 ease-out group-hover:scale-105"
           loading="lazy"
         />
         <div className="absolute left-3 top-3 flex flex-wrap gap-1.5">
@@ -76,7 +76,7 @@ export function ProductCard({ product, onClick, onAdd }: ProductCardProps) {
             {product.marca.nombre}
           </p>
         )}
-        <h3 className="mt-1 line-clamp-2 text-[15px] font-semibold leading-snug text-foreground">
+        <h3 className="mt-1 line-clamp-2 text-[15px] font-semibold leading-snug text-foreground transition-colors group-hover:text-primary">
           {product.nombre}
         </h3>
 
@@ -103,7 +103,7 @@ export function ProductCard({ product, onClick, onAdd }: ProductCardProps) {
               onAdd();
             }}
             disabled={product.estado === "agotado"}
-            className="h-9 w-9 rounded-full p-0 shadow-md transition-transform active:scale-90"
+            className="h-9 w-9 rounded-full p-0 shadow-md transition-all group-hover:scale-105 active:scale-90"
           >
             {product.estado === "agotado" ? (
               <Heart className="h-4 w-4" />

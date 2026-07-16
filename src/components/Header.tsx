@@ -56,11 +56,11 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-border bg-white/95 backdrop-blur-md">
-      <div className="flex h-14 items-center gap-2 px-3 sm:h-16 sm:gap-3 sm:px-4 lg:px-8">
+      <div className="flex h-16 items-center gap-2 px-3 sm:h-[72px] sm:gap-3 sm:px-4 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex shrink-0 items-center">
-          <Logo variant="horizontal" height={44} className="hidden sm:block" />
-          <Logo variant="isotype" height={36} className="sm:hidden" />
+          <Logo variant="horizontal" height={52} className="hidden sm:block" />
+          <Logo variant="isotype" height={44} className="sm:hidden" />
         </Link>
 
         {/* Desktop nav links */}

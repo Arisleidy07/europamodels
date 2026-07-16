@@ -23,7 +23,7 @@ import { useCart } from "@/context/CartContext";
 import { useSettings } from "@/context/SettingsContext";
 import { normalizeText, cn } from "@/lib/utils";
 import { LicenseGuard } from "@/components/LicenseGuard";
-import type { ProductWithRelations } from "@/types";
+import type { ProductWithRelations, Gender } from "@/types";
 import toast from "react-hot-toast";
 
 const PAGE_SIZE = 24;
@@ -177,6 +177,7 @@ function FilterSidebar({
   onSelectBrand,
   selectedGender,
   onSelectGender,
+  genders,
   onClear,
 }: {
   open: boolean;
@@ -186,14 +187,15 @@ function FilterSidebar({
   onSelectBrand: (id: string) => void;
   selectedGender: string;
   onSelectGender: (id: string) => void;
+  genders: Gender[];
   onClear: () => void;
 }) {
-  const genders = [
-    { id: "todos", label: "Todos" },
-    { id: "hombre", label: "Hombre" },
-    { id: "mujer", label: "Mujer" },
-    { id: "unisex", label: "Unisex" },
-    { id: "ninos", label: "Niños" },
+  const genderOptions = [
+    { value: "todos", label: "Todos" },
+    ...genders
+      .filter((g) => g.activo)
+      .sort((a, b) => a.orden - b.orden)
+      .map((g) => ({ value: g.nombre, label: g.nombre })),
   ];
 
   return (
@@ -229,13 +231,13 @@ function FilterSidebar({
                   Género
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {genders.map((g) => (
+                  {genderOptions.map((g) => (
                     <button
-                      key={g.id}
-                      onClick={() => onSelectGender(g.id)}
+                      key={g.value}
+                      onClick={() => onSelectGender(g.value)}
                       className={cn(
                         "rounded-full border px-3.5 py-2 text-xs font-medium transition-all",
-                        selectedGender === g.id
+                        selectedGender === g.value
                           ? "border-primary bg-primary/10 text-primary"
                           : "border-border bg-white text-foreground hover:bg-muted",
                       )}
@@ -294,14 +296,16 @@ const CatalogProductCard = memo(ProductCard);
 
 export default function CatalogoPage() {
   const router = useRouter();
-  const { products, categories, subcategories, brands, loading } = useCatalogData();
+  const { products, categories, subcategories, brands, genders, loading } =
+    useCatalogData();
   const { addToCart, openCartDrawer } = useCart();
   const { settings } = useSettings();
   useSyncQueue();
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("todos");
+  const [selectedSubcategory, setSelectedSubcategory] =
+    useState<string>("todos");
   const [selectedBrand, setSelectedBrand] = useState<string>("todos");
   const [selectedGender, setSelectedGender] = useState<string>("todos");
   const [catSidebarOpen, setCatSidebarOpen] = useState(false);
@@ -310,7 +314,13 @@ export default function CatalogoPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [search, selectedCategory, selectedSubcategory, selectedBrand, selectedGender]);
+  }, [
+    search,
+    selectedCategory,
+    selectedSubcategory,
+    selectedBrand,
+    selectedGender,
+  ]);
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
@@ -322,6 +332,11 @@ export default function CatalogoPage() {
   const filteredProducts = useMemo(() => {
     const term = normalizeText(search);
     return products
+      .filter((p) => {
+        // Public catalog: exclude drafts and hidden products
+        if (p.estado === "borrador" || p.estado === "oculto") return false;
+        return true;
+      })
       .filter((p) => {
         if (!term) return true;
         const text = [
@@ -339,11 +354,17 @@ export default function CatalogoPage() {
         return normalizeText(text).includes(term);
       })
       .filter((p) => {
-        if (selectedCategory !== "todos" && p.categoriaId !== selectedCategory) return false;
-        if (selectedSubcategory !== "todos" && p.subcategoriaId !== selectedSubcategory)
+        if (selectedCategory !== "todos" && p.categoriaId !== selectedCategory)
           return false;
-        if (selectedBrand !== "todos" && p.marcaId !== selectedBrand) return false;
-        if (selectedGender !== "todos" && p.genero !== selectedGender) return false;
+        if (
+          selectedSubcategory !== "todos" &&
+          p.subcategoriaId !== selectedSubcategory
+        )
+          return false;
+        if (selectedBrand !== "todos" && p.marcaId !== selectedBrand)
+          return false;
+        if (selectedGender !== "todos" && p.genero !== selectedGender)
+          return false;
         return true;
       });
   }, [
@@ -384,16 +405,6 @@ export default function CatalogoPage() {
     setSearch("");
   }, []);
 
-  const activeLabel = useMemo(() => {
-    if (selectedSubcategory !== "todos") {
-      return subcategories.find((s) => s.id === selectedSubcategory)?.nombre;
-    }
-    if (selectedCategory !== "todos") {
-      return categories.find((c) => c.id === selectedCategory)?.nombre;
-    }
-    return "Todos los productos";
-  }, [selectedCategory, selectedSubcategory, categories, subcategories]);
-
   return (
     <LicenseGuard>
       <div className="flex min-h-screen flex-col bg-background">
@@ -404,43 +415,40 @@ export default function CatalogoPage() {
           onSelectProduct={(p) => router.push(`/producto/${p.id}`)}
         />
 
-        <div className="sticky top-0 z-30 border-b border-border bg-white/95 backdrop-blur-md">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 lg:px-8">
+        <div className="sticky top-2 z-30 px-4 lg:px-8">
+          <div className="mx-auto flex max-w-7xl items-center justify-between">
             <button
               onClick={() => setCatSidebarOpen(true)}
               className={cn(
-                "flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-all",
+                "flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
                 selectedCategory !== "todos"
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border bg-white text-foreground hover:bg-muted",
+                  ? "border-primary bg-primary text-white"
+                  : "border-border/70 bg-white/95 text-foreground hover:bg-white hover:shadow-xl",
               )}
             >
               <ListFilter className="h-4 w-4" />
-              Categorías
+              <span className="hidden sm:inline">Categorías</span>
+              <span className="sm:hidden">Categorías</span>
             </button>
-
-            <div className="flex-1 text-center">
-              <h1 className="hidden truncate text-sm font-semibold text-foreground sm:block">
-                {activeLabel}
-              </h1>
-              <p className="text-xs text-muted-foreground sm:hidden">
-                {filteredProducts.length} productos
-              </p>
-            </div>
 
             <button
               onClick={() => setFilterSidebarOpen(true)}
               className={cn(
-                "relative flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-all",
+                "relative flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
                 activeFilterCount > 0
-                  ? "border-primary bg-primary/5 text-primary"
-                  : "border-border bg-white text-foreground hover:bg-muted",
+                  ? "border-primary bg-primary text-white"
+                  : "border-border/70 bg-white/95 text-foreground hover:bg-white hover:shadow-xl",
               )}
             >
               <SlidersHorizontal className="h-4 w-4" />
               Filtros
               {activeFilterCount > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                <span
+                  className={cn(
+                    "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
+                    activeFilterCount > 0 ? "bg-white text-primary" : "",
+                  )}
+                >
                   {activeFilterCount}
                 </span>
               )}
@@ -487,7 +495,10 @@ export default function CatalogoPage() {
               </div>
               {hasMore && (
                 <div className="mt-8 flex justify-center">
-                  <Button variant="outline" onClick={() => setPage((p) => p + 1)}>
+                  <Button
+                    variant="outline"
+                    onClick={() => setPage((p) => p + 1)}
+                  >
                     Cargar más
                   </Button>
                 </div>
@@ -521,9 +532,10 @@ export default function CatalogoPage() {
             setSelectedBrand(id);
             setFilterSidebarOpen(false);
           }}
+          genders={genders}
           selectedGender={selectedGender}
-          onSelectGender={(id) => {
-            setSelectedGender(id);
+          onSelectGender={(name) => {
+            setSelectedGender(name);
             setFilterSidebarOpen(false);
           }}
           onClear={clearFilters}
