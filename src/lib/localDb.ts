@@ -59,24 +59,45 @@ let dbPromise: Promise<IDBPDatabase<EuropaDB>> | null = null;
 export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<EuropaDB>(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        const productsStore = db.createObjectStore("products", {
-          keyPath: "id",
-        });
-        productsStore.createIndex("by-category", "categoriaId");
-        productsStore.createIndex("by-brand", "marcaId");
-        productsStore.createIndex("by-status", "estado");
+      upgrade(db, _oldVersion, _newVersion, transaction) {
+        const productsStore = db.objectStoreNames.contains("products")
+          ? transaction.objectStore("products")
+          : db.createObjectStore("products", { keyPath: "id" });
 
-        db.createObjectStore("categories", { keyPath: "id" });
-        db.createObjectStore("subcategories", { keyPath: "id" });
-        db.createObjectStore("brands", { keyPath: "id" });
+        if (!productsStore.indexNames.contains("by-category")) {
+          productsStore.createIndex("by-category", "categoriaId");
+        }
+        if (!productsStore.indexNames.contains("by-brand")) {
+          productsStore.createIndex("by-brand", "marcaId");
+        }
+        if (!productsStore.indexNames.contains("by-status")) {
+          productsStore.createIndex("by-status", "estado");
+        }
+
+        if (!db.objectStoreNames.contains("categories")) {
+          db.createObjectStore("categories", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("subcategories")) {
+          db.createObjectStore("subcategories", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("brands")) {
+          db.createObjectStore("brands", { keyPath: "id" });
+        }
         if (!db.objectStoreNames.contains("genders")) {
           db.createObjectStore("genders", { keyPath: "id" });
         }
-        db.createObjectStore("quotes", { keyPath: "id" });
-        db.createObjectStore("settings", { keyPath: "id" });
-        db.createObjectStore("cart", { keyPath: "productoId" });
-        db.createObjectStore("syncQueue", { keyPath: "id" });
+        if (!db.objectStoreNames.contains("quotes")) {
+          db.createObjectStore("quotes", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("settings")) {
+          db.createObjectStore("settings", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("cart")) {
+          db.createObjectStore("cart", { keyPath: "productoId" });
+        }
+        if (!db.objectStoreNames.contains("syncQueue")) {
+          db.createObjectStore("syncQueue", { keyPath: "id" });
+        }
       },
     });
   }
