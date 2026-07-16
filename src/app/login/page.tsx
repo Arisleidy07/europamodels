@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Logo } from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
+import { getAuthErrorMessage, validateEmail } from "@/lib/authErrors";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -18,16 +19,47 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [formError, setFormError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const normalizedEmail = email.trim();
+    const nextEmailError = validateEmail(normalizedEmail) || "";
+    const nextPasswordError = password ? "" : "Escribe tu contraseña.";
+
+    setEmailError(nextEmailError);
+    setPasswordError(nextPasswordError);
+    setFormError("");
+
+    if (nextEmailError || nextPasswordError) return;
+
     setLoading(true);
     try {
-      await login(email, password);
+      await login(normalizedEmail, password);
       toast.success("Bienvenido");
       router.push("/");
-    } catch (err: any) {
-      toast.error(err.message || "Credenciales incorrectas");
+    } catch (error: unknown) {
+      const message = getAuthErrorMessage(error);
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String(error.code)
+          : "";
+
+      if (code === "auth/invalid-email" || code === "auth/missing-email") {
+        setEmailError(message);
+      } else if (
+        code === "auth/missing-password" ||
+        code === "auth/invalid-credential" ||
+        code === "auth/user-not-found" ||
+        code === "auth/wrong-password"
+      ) {
+        setPasswordError(message);
+      } else {
+        setFormError(message);
+      }
     } finally {
       setLoading(false);
     }
@@ -50,13 +82,20 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <Input
             label="Correo electrónico"
             type="email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailError) setEmailError("");
+              if (formError) setFormError("");
+            }}
+            onBlur={() => setEmailError(validateEmail(email) || "")}
+            error={emailError}
             placeholder="tu@europamodels.com"
+            autoComplete="email"
             required
           />
           <div className="relative">
@@ -64,8 +103,14 @@ export default function LoginPage() {
               label="Contraseña"
               type={showPassword ? "text" : "password"}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError("");
+                if (formError) setFormError("");
+              }}
+              error={passwordError}
               placeholder="••••••••"
+              autoComplete="current-password"
               required
             />
             <button
@@ -80,6 +125,15 @@ export default function LoginPage() {
               )}
             </button>
           </div>
+
+          {formError && (
+            <p
+              className="rounded-xl bg-danger/10 px-4 py-3 text-sm text-danger"
+              role="alert"
+            >
+              {formError}
+            </p>
+          )}
 
           <Button type="submit" size="lg" className="w-full" loading={loading}>
             {loading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : null}
