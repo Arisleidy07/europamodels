@@ -1,4 +1,4 @@
-export type UserRole = "administrador" | "vendedor" | "fotografa" | "empleado";
+export type UserRole = "administrador" | "vendedor";
 
 export interface UserPermissions {
   productos?: {

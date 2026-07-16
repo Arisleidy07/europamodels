@@ -4,8 +4,9 @@ import React, { useState, useEffect } from "react";
 import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { getQuotes } from "@/lib/localDb";
-import { formatCurrency } from "@/lib/utils";
-import { FileText, ExternalLink, Loader2 } from "lucide-react";
+import { formatCurrency, shareContent } from "@/lib/utils";
+import { FileText, ExternalLink, Loader2, Send } from "lucide-react";
+import toast from "react-hot-toast";
 import type { Quote } from "@/types";
 
 export default function AdminQuotes() {
@@ -68,6 +69,18 @@ export default function AdminQuotes() {
 
     return () => unsub();
   }, []);
+
+  const handleSend = async (quote: Quote) => {
+    const shared = await shareContent(
+      {
+        title: `Cotización ${quote.codigo}`,
+        text: `Te comparto la cotización ${quote.codigo} por ${formatCurrency(quote.total)}.`,
+        url: `${window.location.origin}/cotizacion/${quote.codigo}`,
+      },
+      () => toast.success("Enlace de cotización copiado"),
+    );
+    if (shared) toast.success("Cotización lista para enviar");
+  };
 
   if (loading) {
     return (
@@ -155,15 +168,26 @@ export default function AdminQuotes() {
                     {formatCurrency(q.total)}
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <a
-                      href={`/cotizacion/${q.codigo}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                      Ver
-                    </a>
+                    <div className="inline-flex items-center gap-1">
+                      <a
+                        href={`/cotizacion/${q.codigo}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Ver
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleSend(q)}
+                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/10"
+                        title="Enviar cotización"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        Enviar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

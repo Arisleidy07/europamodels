@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminAuth } from "@/lib/firebaseAdmin";
-import { getFirestore } from "firebase-admin/firestore";
-import { getApps } from "firebase-admin/app";
+import { getAdminAuth, getAdminFirestore } from "@/lib/firebaseAdmin";
+import { assertManageableUser, requireAdministrator } from "@/lib/serverAuth";
 
 export async function POST(req: NextRequest) {
   try {
+    await requireAdministrator(req);
     const body = await req.json();
     const { uid, newPassword } = body;
 
-    if (!uid || !newPassword) {
-      return NextResponse.json({ error: "uid y newPassword requeridos" }, { status: 400 });
+    if (!uid || typeof newPassword !== "string") {
+      return NextResponse.json(
+        { error: "uid y newPassword requeridos" },
+        { status: 400 },
+      );
     }
 
+    if (newPassword.length < 6) {
+      return NextResponse.json(
+        { error: "La contraseña debe tener al menos 6 caracteres" },
+        { status: 400 },
+      );
+    }
+
+    await assertManageableUser(uid);
     const auth = getAdminAuth();
     await auth.updateUser(uid, { password: newPassword });
 
-    // Mark user as needing password change
-    const db = getFirestore(getApps()[0]);
+    const db = getAdminFirestore();
     await db.collection("users").doc(uid).update({
       requiresPasswordChange: true,
     });
@@ -24,6 +34,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error("Error resetting password:", err);
-    return NextResponse.json({ error: err.message || "Error interno" }, { status: 500 });
+    const message = String(
+      err?.message || "No se pudo restablecer la contraseña",
+    );
+    const status =
+      message === "Debes iniciar sesión para realizar esta acción"
+        ? 401
+        : message.includes("permisos") ||
+            message.includes("no puede modificarse")
+          ? 403
+          : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

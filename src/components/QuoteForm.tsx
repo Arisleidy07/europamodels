@@ -73,10 +73,10 @@ export function QuoteForm({ open, onClose, onQuoteCreated }: QuoteFormProps) {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", damping: 28, stiffness: 350 }}
-            className="fixed inset-4 z-[60] mx-auto flex max-h-[92vh] max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-2xl sm:inset-8 md:inset-y-12"
+            className="fixed inset-0 z-[60] flex h-[100dvh] w-full flex-col bg-background shadow-2xl"
           >
             <div className="flex h-full flex-col">
-              <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div className="flex shrink-0 items-center justify-between border-b border-border bg-white px-4 py-4 sm:px-6">
                 <h2 className="text-lg font-semibold">Crear cotización</h2>
                 <button
                   onClick={onClose}
@@ -87,7 +87,7 @@ export function QuoteForm({ open, onClose, onQuoteCreated }: QuoteFormProps) {
               </div>
 
               <form onSubmit={handleSubmit} className="flex h-full flex-col">
-                <div className="flex-1 space-y-5 overflow-y-auto p-6">
+                <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 sm:p-6">
                   <div>
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                       Información del cliente
@@ -156,7 +156,7 @@ export function QuoteForm({ open, onClose, onQuoteCreated }: QuoteFormProps) {
                   </div>
                 </div>
 
-                <div className="border-t border-border p-6">
+                <div className="shrink-0 border-t border-border bg-white p-4 sm:p-6">
                   <Button
                     type="submit"
                     size="lg"

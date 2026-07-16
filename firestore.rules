@@ -2,65 +2,83 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Users: read/write own doc, or any authenticated user can read others
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.rol == "administrador";
+    }
+
     match /users/{userId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == userId && request.resource.data.rol == "vendedor";
+      allow update: if signedIn() &&
+        (!resource.data.keys().hasAny(["isSuperAdmin"]) || request.resource.data.isSuperAdmin == resource.data.isSuperAdmin) &&
+        (request.resource.data.rol == "administrador" || request.resource.data.rol == "vendedor") && (
+          (isAdmin() && (!resource.data.keys().hasAny(["isSuperAdmin"]) || resource.data.isSuperAdmin != true)) ||
+          (request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["nombre", "apellido", "foto", "ultimoAcceso", "requiresPasswordChange"]))
+        );
+      allow delete: if isAdmin() && (!resource.data.keys().hasAny(["isSuperAdmin"]) || resource.data.isSuperAdmin != true);
     }
 
     // Products: public read, authenticated write (permissions enforced in app)
     match /products/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create, update, delete: if isAdmin();
     }
 
     // Categories: public read, authenticated write
     match /categories/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create, update, delete: if isAdmin();
     }
 
     // Subcategories: public read, authenticated write
     match /subcategories/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create, update, delete: if isAdmin();
     }
 
     // Brands: public read, authenticated write
     match /brands/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // Genders: public read, authenticated write
+    match /genders/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
     }
 
     // Quotes: public read, authenticated write
     match /quotes/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create: if signedIn() && request.resource.data.creadoPor == request.auth.uid;
+      allow update, delete: if isAdmin() || (signedIn() && resource.data.creadoPor == request.auth.uid);
     }
 
     // Settings: public read, authenticated write
     match /settings/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     // Invitations
     match /invitations/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
 
     // Olfactory library: public read, authenticated write
     match /olfactoryNotes/{docId} {
       allow read: if true;
-      allow create, update, delete: if request.auth != null;
+      allow create, update, delete: if isAdmin();
     }
 
     // Activity logs
     match /activityLogs/{docId} {
-      allow read, create: if request.auth != null;
+      allow read, create: if signedIn();
     }
   }
 }

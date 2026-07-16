@@ -30,8 +30,6 @@ import type { AppUser, UserRole } from "@/types";
 const ROLES: { value: UserRole; label: string }[] = [
   { value: "administrador", label: "Administrador" },
   { value: "vendedor", label: "Vendedor" },
-  { value: "fotografa", label: "Fotógrafa" },
-  { value: "empleado", label: "Empleado" },
 ];
 
 function generatePassword(): string {
@@ -43,7 +41,7 @@ function generatePassword(): string {
 }
 
 export default function AdminTeam() {
-  const { user: currentUser, canManageUser } = useAuth();
+  const { user: currentUser, firebaseUser, canManageUser } = useAuth();
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -56,7 +54,7 @@ export default function AdminTeam() {
   // Create form
   const [newName, setNewName] = useState("");
   const [newUsername, setNewUsername] = useState("");
-  const [newRole, setNewRole] = useState<UserRole>("empleado");
+  const [newRole, setNewRole] = useState<UserRole>("vendedor");
   const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
@@ -106,9 +104,15 @@ export default function AdminTeam() {
 
     setSaving(true);
     try {
+      const token = await firebaseUser?.getIdToken();
+      if (!token)
+        throw new Error("Tu sesión expiró. Inicia sesión nuevamente.");
       const res = await fetch("/api/users/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ username, nombre, rol: newRole, password }),
       });
 
@@ -125,7 +129,7 @@ export default function AdminTeam() {
       setNewName("");
       setNewUsername("");
       setNewPassword("");
-      setNewRole("empleado");
+      setNewRole("vendedor");
       loadUsers();
       toast.success("Empleado creado exitosamente");
     } catch (err: any) {
@@ -150,9 +154,15 @@ export default function AdminTeam() {
     if (!deleteTarget) return;
     setSaving(true);
     try {
+      const token = await firebaseUser?.getIdToken();
+      if (!token)
+        throw new Error("Tu sesión expiró. Inicia sesión nuevamente.");
       const res = await fetch("/api/users/delete", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ uid: deleteTarget.id }),
       });
       const data = await res.json();
@@ -171,9 +181,15 @@ export default function AdminTeam() {
     if (!resetTarget || !resetPassword.trim()) return;
     setSaving(true);
     try {
+      const token = await firebaseUser?.getIdToken();
+      if (!token)
+        throw new Error("Tu sesión expiró. Inicia sesión nuevamente.");
       const res = await fetch("/api/users/reset-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           uid: resetTarget.id,
           newPassword: resetPassword,

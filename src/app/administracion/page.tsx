@@ -156,17 +156,22 @@ export default function AdminPage() {
     return () => window.removeEventListener("click", close, { capture: true });
   }, [menuOpen]);
 
-  if (!user) {
+  if (!user || user.rol !== "administrador") {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-white px-6 text-center">
         <h1 className="text-2xl font-bold text-foreground">
           Acceso restringido
         </h1>
         <p className="mt-2 text-muted-foreground">
-          Debes iniciar sesión para acceder al panel.
+          {!user
+            ? "Debes iniciar sesión para acceder al panel."
+            : "Tu rol no tiene acceso al panel de administración."}
         </p>
-        <Button onClick={() => router.push("/login")} className="mt-6">
-          Iniciar sesión
+        <Button
+          onClick={() => router.push(user ? "/catalogo" : "/login")}
+          className="mt-6"
+        >
+          {user ? "Ir al catálogo" : "Iniciar sesión"}
         </Button>
       </div>
     );
