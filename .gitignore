@@ -11,6 +11,7 @@
 /public/sw.js
 /public/workbox-*.js
 /public/workbox-*.map
+/public/fallback-*.js
 
 # Environment variables
 .env

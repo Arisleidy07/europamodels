@@ -107,6 +107,7 @@ export function getDB() {
 export async function saveProducts(products: Product[]) {
   const db = await getDB();
   const tx = db.transaction("products", "readwrite");
+  await tx.store.clear();
   await Promise.all([...products.map((p) => tx.store.put(p)), tx.done]);
 }
 
@@ -118,6 +119,7 @@ export async function getProducts(): Promise<Product[]> {
 export async function saveCategories(categories: Category[]) {
   const db = await getDB();
   const tx = db.transaction("categories", "readwrite");
+  await tx.store.clear();
   await Promise.all([...categories.map((c) => tx.store.put(c)), tx.done]);
 }
 
@@ -129,6 +131,7 @@ export async function getCategories(): Promise<Category[]> {
 export async function saveSubcategories(subcategories: Subcategory[]) {
   const db = await getDB();
   const tx = db.transaction("subcategories", "readwrite");
+  await tx.store.clear();
   await Promise.all([...subcategories.map((s) => tx.store.put(s)), tx.done]);
 }
 
@@ -140,6 +143,7 @@ export async function getSubcategories(): Promise<Subcategory[]> {
 export async function saveBrands(brands: Brand[]) {
   const db = await getDB();
   const tx = db.transaction("brands", "readwrite");
+  await tx.store.clear();
   await Promise.all([...brands.map((b) => tx.store.put(b)), tx.done]);
 }
 
@@ -151,6 +155,7 @@ export async function getBrands(): Promise<Brand[]> {
 export async function saveGenders(genders: Gender[]) {
   const db = await getDB();
   const tx = db.transaction("genders", "readwrite");
+  await tx.store.clear();
   await Promise.all([...genders.map((g) => tx.store.put(g)), tx.done]);
 }
 

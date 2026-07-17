@@ -84,8 +84,13 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     let unsubscribe = () => {};
 
     const setup = async () => {
-      const local = await getSettings();
-      if (local) setSettings(local);
+      try {
+        const local = await getSettings();
+        if (local) setSettings(local);
+      } catch {
+        setSettings(defaultSettings);
+      }
+      setLoading(false);
 
       const firestore = getFirebaseDb();
       if (!firestore) {

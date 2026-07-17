@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useSettings } from "@/context/SettingsContext";
 import { LicenseGuard } from "@/components/LicenseGuard";
+import { cacheHomeVideos } from "@/lib/offlineCache";
 
 const DEFAULT_VIDEOS = ["/videos/perfume1.mov", "/videos/perfume3.mov"];
 
@@ -14,24 +15,46 @@ export default function HomePage() {
   const { settings } = useSettings();
   const { user } = useAuth();
 
-  const videos: string[] =
-    settings.inicio.videos && settings.inicio.videos.length > 0
-      ? settings.inicio.videos
-      : settings.inicio.videoInicio
-        ? [settings.inicio.videoInicio]
-        : DEFAULT_VIDEOS;
+  const videos = useMemo(
+    () =>
+      settings.inicio.videos && settings.inicio.videos.length > 0
+        ? settings.inicio.videos
+        : settings.inicio.videoInicio
+          ? [settings.inicio.videoInicio]
+          : DEFAULT_VIDEOS,
+    [settings.inicio.videoInicio, settings.inicio.videos],
+  );
   const [current, setCurrent] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const failedVideos = useRef(0);
+  const activeVideo = videos[current % videos.length];
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
     video.load();
-    video.play().catch(() => {});
-  }, [current]);
+    void video.play().catch(() => undefined);
+  }, [activeVideo]);
 
-  const handleEnded = () => {
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      void cacheHomeVideos(videos);
+    }, 1500);
+    return () => window.clearTimeout(timeout);
+  }, [videos]);
+
+  const showNextVideo = () => {
     setCurrent((prev) => (prev + 1) % videos.length);
+  };
+
+  const handleVideoError = () => {
+    failedVideos.current += 1;
+    if (failedVideos.current < videos.length) showNextVideo();
+  };
+
+  const handleVideoReady = () => {
+    failedVideos.current = 0;
+    void videoRef.current?.play();
   };
 
   return (
@@ -41,16 +64,18 @@ export default function HomePage() {
         <div className="absolute inset-0 z-0">
           <video
             ref={videoRef}
-            key={videos[current]}
+            key={activeVideo}
             autoPlay
             muted
             playsInline
             preload="auto"
-            onEnded={handleEnded}
+            poster={settings.inicio.imagenRespaldo}
+            onCanPlay={handleVideoReady}
+            onEnded={showNextVideo}
+            onError={handleVideoError}
             className="h-full w-full object-cover"
           >
-            <source src={videos[current]} type="video/mp4" />
-            <source src={videos[current]} type="video/quicktime" />
+            <source src={activeVideo} />
           </video>
           <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" />
         </div>

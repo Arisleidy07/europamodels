@@ -6,10 +6,11 @@ import {
 } from "firebase/app";
 import { getAuth, Auth, connectAuthEmulator } from "firebase/auth";
 import {
-  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   Firestore,
   connectFirestoreEmulator,
-  enableIndexedDbPersistence,
 } from "firebase/firestore";
 import {
   getStorage,
@@ -47,7 +48,13 @@ export function getFirebaseAuth(): Auth | null {
 }
 
 export function getFirebaseDb(): Firestore | null {
-  if (!_db && _app) _db = getFirestore(_app);
+  if (!_db && _app) {
+    _db = initializeFirestore(_app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager(),
+      }),
+    });
+  }
   return _db;
 }
 
@@ -86,10 +93,9 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
 }
 
 export async function enableOfflinePersistence() {
-  const d = getFirebaseDb();
-  if (!d || typeof window === "undefined") return;
+  if (typeof window === "undefined") return;
   try {
-    await enableIndexedDbPersistence(d);
+    getFirebaseDb();
   } catch {
     // Persistence may fail if multiple tabs are open; ignore gracefully
   }

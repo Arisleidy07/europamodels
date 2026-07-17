@@ -62,6 +62,23 @@ const defaultPermissions: Required<UserPermissions> = {
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const USER_CACHE_KEY = "europa-models-current-user";
+
+function saveCachedUser(user: AppUser | null) {
+  if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+  else localStorage.removeItem(USER_CACHE_KEY);
+}
+
+function getCachedUser(uid: string): AppUser | null {
+  try {
+    const cached = localStorage.getItem(USER_CACHE_KEY);
+    if (!cached) return null;
+    const parsed = JSON.parse(cached) as AppUser;
+    return parsed.id === uid ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
@@ -79,21 +96,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
-      if (fbUser) {
+      if (!fbUser) {
+        setUser(null);
+        setRequiresPasswordChange(false);
+        saveCachedUser(null);
+        setLoading(false);
+        return;
+      }
+
+      const cachedUser = getCachedUser(fbUser.uid);
+      if (cachedUser) {
+        setUser(cachedUser);
+        setRequiresPasswordChange(!!cachedUser.requiresPasswordChange);
+        setLoading(false);
+      }
+
+      try {
         const userDoc = await getDoc(doc(firestore, "users", fbUser.uid));
         if (userDoc.exists()) {
           const data = userDoc.data() as Omit<AppUser, "id">;
-          setUser({ ...data, id: fbUser.uid });
+          const appUser = { ...data, id: fbUser.uid };
+          setUser(appUser);
+          saveCachedUser(appUser);
           setRequiresPasswordChange(!!data.requiresPasswordChange);
-          await updateDoc(doc(firestore, "users", fbUser.uid), {
+          void updateDoc(doc(firestore, "users", fbUser.uid), {
             ultimoAcceso: new Date().toISOString(),
-          });
+          }).catch(() => undefined);
         }
-      } else {
-        setUser(null);
-        setRequiresPasswordChange(false);
+      } catch {
+        if (!cachedUser) {
+          setUser(null);
+          setRequiresPasswordChange(false);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
@@ -107,7 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!userDoc.exists()) throw new Error("Usuario no encontrado");
     const data = userDoc.data() as Omit<AppUser, "id">;
     if (!data.activo) throw new Error("Cuenta suspendida");
-    setUser({ ...data, id: result.user.uid });
+    const appUser = { ...data, id: result.user.uid };
+    setUser(appUser);
+    saveCachedUser(appUser);
     setRequiresPasswordChange(!!data.requiresPasswordChange);
   };
 
@@ -133,11 +172,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         permisos: defaultPermissions,
       };
       await setDoc(doc(firestore, "users", result.user.uid), newUser);
-      setUser({ ...newUser, id: result.user.uid });
+      const appUser = { ...newUser, id: result.user.uid };
+      setUser(appUser);
+      saveCachedUser(appUser);
     } else {
       const data = userDoc.data() as Omit<AppUser, "id">;
       if (!data.activo) throw new Error("Cuenta suspendida");
-      setUser({ ...data, id: result.user.uid });
+      const appUser = { ...data, id: result.user.uid };
+      setUser(appUser);
+      saveCachedUser(appUser);
     }
   };
 
@@ -145,6 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const auth = getFirebaseAuth();
     if (auth) await signOut(auth);
     setUser(null);
+    saveCachedUser(null);
     setRequiresPasswordChange(false);
   };
 
@@ -167,7 +211,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userDoc = await getDoc(doc(firestore, "users", auth.currentUser.uid));
     if (userDoc.exists()) {
       const data = userDoc.data() as Omit<AppUser, "id">;
-      setUser({ ...data, id: auth.currentUser.uid });
+      const appUser = { ...data, id: auth.currentUser.uid };
+      setUser(appUser);
+      saveCachedUser(appUser);
     }
   };
 

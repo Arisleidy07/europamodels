@@ -6,6 +6,7 @@ import { CartProvider } from "@/context/CartContext";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { Toaster } from "react-hot-toast";
 import { AuthGate } from "@/components/AuthGate";
+import { CatalogDataProvider } from "@/hooks/useCatalogData";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -40,21 +41,23 @@ export default function RootLayout({
       <body className="antialiased">
         <SettingsProvider>
           <AuthProvider>
-            <CartProvider>
-              <AuthGate>{children}</AuthGate>
-              <Toaster
-                position="bottom-center"
-                toastOptions={{
-                  duration: 2000,
-                  style: {
-                    borderRadius: "1rem",
-                    background: "#ffffff",
-                    color: "#111827",
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
-                  },
-                }}
-              />
-            </CartProvider>
+            <CatalogDataProvider>
+              <CartProvider>
+                <AuthGate>{children}</AuthGate>
+                <Toaster
+                  position="bottom-center"
+                  toastOptions={{
+                    duration: 2000,
+                    style: {
+                      borderRadius: "1rem",
+                      background: "#ffffff",
+                      color: "#111827",
+                      boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+                    },
+                  }}
+                />
+              </CartProvider>
+            </CatalogDataProvider>
           </AuthProvider>
         </SettingsProvider>
       </body>
