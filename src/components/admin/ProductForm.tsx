@@ -40,6 +40,7 @@ import {
 } from "@/lib/categories";
 import { createGender, deleteGender } from "@/lib/genders";
 import { useAuth } from "@/context/AuthContext";
+import { useCatalogData } from "@/hooks/useCatalogData";
 import { generateId, cn } from "@/lib/utils";
 import {
   getOlfactoryNotes,
@@ -1371,6 +1372,13 @@ export function ProductForm({
   onSaved,
 }: ProductFormProps) {
   const { user } = useAuth();
+  const {
+    removeCategory,
+    removeSubcategory,
+    removeBrand,
+    removeGender,
+    olfactoryNotes: cachedOlfactoryNotes,
+  } = useCatalogData();
   const [showDraftsPanel, setShowDraftsPanel] = useState(false);
   const [drafts, setDrafts] = useState<DraftEntry[]>(() => getDrafts());
   const currentDraftId = useRef<string | undefined>(undefined);
@@ -1418,17 +1426,21 @@ export function ProductForm({
   const [showNewBrand, setShowNewBrand] = useState(false);
   const [showNewSubcategory, setShowNewSubcategory] = useState(false);
   const [showNewGender, setShowNewGender] = useState(false);
-  const [olfactoryNotes, setOlfactoryNotes] = useState<OlfactoryNote[]>([]);
+  const [olfactoryNotes, setOlfactoryNotes] =
+    useState<OlfactoryNote[]>(cachedOlfactoryNotes);
   const [formErrors, setFormErrors] = useState<
     { section: string; message: string }[]
   >([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getOlfactoryNotes()
-      .then(setOlfactoryNotes)
-      .catch(() => {});
-  }, []);
+    setOlfactoryNotes(cachedOlfactoryNotes);
+    if (cachedOlfactoryNotes.length === 0) {
+      getOlfactoryNotes()
+        .then(setOlfactoryNotes)
+        .catch(() => {});
+    }
+  }, [cachedOlfactoryNotes]);
 
   const filteredSubcategories = subcategories.filter(
     (s) => s.categoriaId === form.categoriaId && s.activo,
@@ -2477,6 +2489,7 @@ export function ProductForm({
         }}
         onDelete={async (id) => {
           await deleteCategory(id);
+          removeCategory(id);
           if (form.categoriaId === id) {
             setForm((prev) => ({
               ...prev,
@@ -2504,6 +2517,7 @@ export function ProductForm({
         }}
         onDelete={async (id) => {
           await deleteBrand(id);
+          removeBrand(id);
           if (form.marcaId === id) {
             setForm((prev) => ({ ...prev, marcaId: "" }));
           }
@@ -2527,6 +2541,7 @@ export function ProductForm({
         }}
         onDelete={async (id) => {
           await deleteGender(id);
+          removeGender(id);
           const removed = genders.find((g) => g.id === id);
           if (removed && form.genero === removed.nombre) {
             setForm((prev) => ({ ...prev, genero: "" }));
@@ -2552,6 +2567,7 @@ export function ProductForm({
         }}
         onDelete={async (id) => {
           await deleteSubcategory(id);
+          removeSubcategory(id);
           if (form.subcategoriaId === id) {
             setForm((prev) => ({ ...prev, subcategoriaId: "" }));
           }

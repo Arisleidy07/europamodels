@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { useCatalogData } from "@/hooks/useCatalogData";
 import {
   getOlfactoryNotes,
   createOlfactoryNote,
@@ -81,7 +82,8 @@ function NoteImage({
 }
 
 export default function AdminOlfactory() {
-  const [notes, setNotes] = useState<OlfactoryNote[]>([]);
+  const { olfactoryNotes, removeOlfactoryNote } = useCatalogData();
+  const [notes, setNotes] = useState<OlfactoryNote[]>(olfactoryNotes);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] =
     useState<OlfactoryCategory>("acordes");
@@ -90,6 +92,11 @@ export default function AdminOlfactory() {
   const [editingNote, setEditingNote] = useState<OlfactoryNote | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<OlfactoryNote | null>(null);
   const [seeding, setSeeding] = useState(false);
+
+  useEffect(() => {
+    setNotes(olfactoryNotes);
+    if (olfactoryNotes.length > 0) setLoading(false);
+  }, [olfactoryNotes]);
 
   const loadNotes = async () => {
     try {
@@ -133,6 +140,7 @@ export default function AdminOlfactory() {
     try {
       if (deleteTarget.imagen) await deleteOlfactoryImage(deleteTarget.imagen);
       await deleteOlfactoryNote(deleteTarget.id);
+      removeOlfactoryNote(deleteTarget.id);
       setNotes((prev) => prev.filter((n) => n.id !== deleteTarget.id));
       toast.success("Eliminado");
     } catch (err: any) {

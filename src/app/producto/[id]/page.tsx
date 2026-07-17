@@ -9,7 +9,6 @@ import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
 import { formatCurrency, cn, shareContent, downloadFile } from "@/lib/utils";
-import { getOlfactoryNotes } from "@/lib/olfactory";
 import {
   Share2,
   Download,
@@ -45,7 +44,7 @@ function intensityColorFn(v: number): string {
 export default function PublicProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { products, loading } = useCatalogData();
+  const { products, olfactoryNotes, loading } = useCatalogData();
   const { settings } = useSettings();
   const { addToCart, openCartDrawer } = useCart();
   const { user, hasPermission } = useAuth();
@@ -61,14 +60,7 @@ export default function PublicProductPage() {
   );
   const [added, setAdded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [olfactoryNotes, setOlfactoryNotes] = useState<OlfactoryNote[]>([]);
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    getOlfactoryNotes()
-      .then(setOlfactoryNotes)
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!id) return;

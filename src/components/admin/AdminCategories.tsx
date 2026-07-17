@@ -34,7 +34,7 @@ const PRESET_COLORS = [
 ];
 
 export default function AdminCategories() {
-  const { categories, loading } = useCatalogData();
+  const { categories, loading, removeCategory } = useCatalogData();
   const [editing, setEditing] = useState<Category | null>(null);
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(PRESET_COLORS[0]);
@@ -73,6 +73,7 @@ export default function AdminCategories() {
     if (!deleteTarget) return;
     try {
       await deleteCategory(deleteTarget.id);
+      removeCategory(deleteTarget.id);
       toast.success("Categoría eliminada");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");

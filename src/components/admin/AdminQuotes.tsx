@@ -1,74 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { getFirebaseDb } from "@/lib/firebase";
-import { getQuotes } from "@/lib/localDb";
+import React from "react";
+import { useCatalogData } from "@/hooks/useCatalogData";
 import { formatCurrency, shareContent } from "@/lib/utils";
 import { FileText, ExternalLink, Loader2, Send } from "lucide-react";
 import toast from "react-hot-toast";
 import type { Quote } from "@/types";
 
 export default function AdminQuotes() {
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let unsub = () => {};
-    let localQuotes: Quote[] = [];
-
-    const loadLocal = async () => {
-      localQuotes = await getQuotes();
-      localQuotes.sort(
-        (a, b) =>
-          new Date(b.fechaCreacion).getTime() -
-          new Date(a.fechaCreacion).getTime(),
-      );
-      setQuotes(localQuotes);
-      setLoading(false);
-    };
-
-    loadLocal();
-
-    const firestore = getFirebaseDb();
-    if (firestore) {
-      try {
-        const q = query(
-          collection(firestore, "quotes"),
-          orderBy("fechaCreacion", "desc"),
-        );
-        unsub = onSnapshot(
-          q,
-          (snap) => {
-            const firestoreData = snap.docs.map(
-              (d) => ({ id: d.id, ...d.data() }) as Quote,
-            );
-            // Merge: use Firestore data as primary, add any local-only quotes
-            const firestoreIds = new Set(firestoreData.map((q) => q.id));
-            const localOnly = localQuotes.filter(
-              (q) => !firestoreIds.has(q.id),
-            );
-            const merged = [...firestoreData, ...localOnly];
-            merged.sort(
-              (a, b) =>
-                new Date(b.fechaCreacion).getTime() -
-                new Date(a.fechaCreacion).getTime(),
-            );
-            setQuotes(merged);
-            setLoading(false);
-          },
-          () => {
-            // On error, keep local data visible
-            setLoading(false);
-          },
-        );
-      } catch {
-        setLoading(false);
-      }
-    }
-
-    return () => unsub();
-  }, []);
+  const { quotes, loading } = useCatalogData();
 
   const handleSend = async (quote: Quote) => {
     const shared = await shareContent(

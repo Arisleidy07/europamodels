@@ -18,7 +18,6 @@ import { ProductCardSkeleton } from "@/components/ui/Skeleton";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useCatalogData } from "@/hooks/useCatalogData";
-import { useSyncQueue } from "@/hooks/useSyncQueue";
 import { useCart } from "@/context/CartContext";
 import { useSettings } from "@/context/SettingsContext";
 import { normalizeText, cn } from "@/lib/utils";
@@ -300,7 +299,6 @@ export default function CatalogoPage() {
     useCatalogData();
   const { addToCart, openCartDrawer } = useCart();
   const { settings } = useSettings();
-  useSyncQueue();
 
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("todos");
@@ -415,8 +413,8 @@ export default function CatalogoPage() {
           onSelectProduct={(p) => router.push(`/producto/${p.id}`)}
         />
 
-        <div className="sticky top-2 z-30 px-4 lg:px-8">
-          <div className="mx-auto flex max-w-7xl items-center justify-between">
+        <div className="sticky top-16 z-40 border-b border-border/70 bg-background/95 px-4 py-2 backdrop-blur-md sm:top-[72px] lg:px-8">
+          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-3">
             <button
               onClick={() => setCatSidebarOpen(true)}
               className={cn(
@@ -431,10 +429,14 @@ export default function CatalogoPage() {
               <span className="sm:hidden">Categorías</span>
             </button>
 
+            <h1 className="truncate text-center text-sm font-bold text-foreground sm:text-base">
+              Catálogo
+            </h1>
+
             <button
               onClick={() => setFilterSidebarOpen(true)}
               className={cn(
-                "relative flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
+                "relative ml-auto flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
                 activeFilterCount > 0
                   ? "border-primary bg-primary text-white"
                   : "border-border/70 bg-white/95 text-foreground hover:bg-white hover:shadow-xl",

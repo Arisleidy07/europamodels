@@ -9,6 +9,7 @@ import type {
   AppSettings,
   CartItem,
   SyncQueueItem,
+  OlfactoryNote,
 } from "@/types";
 
 interface EuropaDB extends DBSchema {
@@ -33,6 +34,10 @@ interface EuropaDB extends DBSchema {
     key: string;
     value: Gender;
   };
+  olfactoryNotes: {
+    key: string;
+    value: OlfactoryNote;
+  };
   quotes: {
     key: string;
     value: Quote;
@@ -52,7 +57,7 @@ interface EuropaDB extends DBSchema {
 }
 
 const DB_NAME = "europa-models-db";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbPromise: Promise<IDBPDatabase<EuropaDB>> | null = null;
 
@@ -85,6 +90,9 @@ export function getDB() {
         }
         if (!db.objectStoreNames.contains("genders")) {
           db.createObjectStore("genders", { keyPath: "id" });
+        }
+        if (!db.objectStoreNames.contains("olfactoryNotes")) {
+          db.createObjectStore("olfactoryNotes", { keyPath: "id" });
         }
         if (!db.objectStoreNames.contains("quotes")) {
           db.createObjectStore("quotes", { keyPath: "id" });
@@ -164,6 +172,18 @@ export async function getGenders(): Promise<Gender[]> {
   return db.getAll("genders");
 }
 
+export async function saveOlfactoryNotes(notes: OlfactoryNote[]) {
+  const db = await getDB();
+  const tx = db.transaction("olfactoryNotes", "readwrite");
+  await tx.store.clear();
+  await Promise.all([...notes.map((note) => tx.store.put(note)), tx.done]);
+}
+
+export async function getOlfactoryNotes(): Promise<OlfactoryNote[]> {
+  const db = await getDB();
+  return db.getAll("olfactoryNotes");
+}
+
 export async function saveSettings(settings: AppSettings) {
   const db = await getDB();
   await db.put("settings", { ...settings, id: "main" });
@@ -189,6 +209,7 @@ export async function getCart(): Promise<CartItem[]> {
 export async function saveQuotes(quotes: Quote[]) {
   const db = await getDB();
   const tx = db.transaction("quotes", "readwrite");
+  await tx.store.clear();
   await Promise.all([...quotes.map((q) => tx.store.put(q)), tx.done]);
 }
 

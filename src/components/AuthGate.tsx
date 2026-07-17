@@ -9,6 +9,7 @@ import { CartDrawer } from "@/components/CartDrawer";
 import { QuoteForm } from "@/components/QuoteForm";
 import { useSettings } from "@/context/SettingsContext";
 import { shareContent } from "@/lib/utils";
+import { useSyncQueue } from "@/hooks/useSyncQueue";
 import toast from "react-hot-toast";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const { cartDrawerOpen, closeCartDrawer } = useCart();
   const { settings } = useSettings();
   const [quoteFormOpen, setQuoteFormOpen] = useState(false);
+  useSyncQueue();
 
   if (loading) return null;
 

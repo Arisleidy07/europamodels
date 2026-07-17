@@ -23,7 +23,8 @@ import toast from "react-hot-toast";
 import type { Subcategory, Category } from "@/types";
 
 export default function AdminSubcategories() {
-  const { categories, subcategories, loading } = useCatalogData();
+  const { categories, subcategories, loading, removeSubcategory } =
+    useCatalogData();
   const [editing, setEditing] = useState<Subcategory | null>(null);
   const [newName, setNewName] = useState("");
   const [newCategoryId, setNewCategoryId] = useState("");
@@ -37,7 +38,10 @@ export default function AdminSubcategories() {
     setSaving(true);
     try {
       if (editing) {
-        await updateSubcategory(editing.id, { nombre: name.trim(), categoriaId: categoryId });
+        await updateSubcategory(editing.id, {
+          nombre: name.trim(),
+          categoriaId: categoryId,
+        });
         toast.success("Subcategoría actualizada");
       } else {
         await createSubcategory({
@@ -62,6 +66,7 @@ export default function AdminSubcategories() {
     if (!deleteTarget) return;
     try {
       await deleteSubcategory(deleteTarget.id);
+      removeSubcategory(deleteTarget.id);
       toast.success("Subcategoría eliminada");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
@@ -85,7 +90,9 @@ export default function AdminSubcategories() {
     }
   };
 
-  const sortedCategories = [...categories].sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const sortedCategories = [...categories].sort((a, b) =>
+    a.nombre.localeCompare(b.nombre),
+  );
 
   if (loading)
     return <div className="text-center text-muted-foreground">Cargando...</div>;
@@ -96,7 +103,9 @@ export default function AdminSubcategories() {
         <h3 className="mb-4 text-base font-semibold">Nueva subcategoría</h3>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">Categoría *</label>
+            <label className="mb-1.5 block text-sm font-medium text-foreground">
+              Categoría *
+            </label>
             <select
               value={newCategoryId}
               onChange={(e) => setNewCategoryId(e.target.value)}
@@ -119,8 +128,15 @@ export default function AdminSubcategories() {
           />
         </div>
         <div className="mt-4 flex justify-end">
-          <Button onClick={handleSave} disabled={saving || !newName.trim() || !newCategoryId}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          <Button
+            onClick={handleSave}
+            disabled={saving || !newName.trim() || !newCategoryId}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             Agregar
           </Button>
         </div>
@@ -163,7 +179,9 @@ export default function AdminSubcategories() {
                     {editing?.id === sub.id ? (
                       <Input
                         value={editing.nombre}
-                        onChange={(e) => setEditing({ ...editing, nombre: e.target.value })}
+                        onChange={(e) =>
+                          setEditing({ ...editing, nombre: e.target.value })
+                        }
                         onKeyDown={(e) => e.key === "Enter" && handleSave()}
                       />
                     ) : (
@@ -174,7 +192,12 @@ export default function AdminSubcategories() {
                     {editing?.id === sub.id ? (
                       <select
                         value={editing.categoriaId}
-                        onChange={(e) => setEditing({ ...editing, categoriaId: e.target.value })}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            categoriaId: e.target.value,
+                          })
+                        }
                         className="w-full rounded-lg border border-border bg-white px-2 py-1 text-sm outline-none focus:border-primary"
                       >
                         {sortedCategories.map((c) => (

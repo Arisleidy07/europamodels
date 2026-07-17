@@ -90,6 +90,17 @@ export async function updateProduct(
     if (clean[k] === undefined) delete clean[k];
   });
   await updateDoc(doc(db, "products", productId), clean);
+  const local = await getProducts();
+  const localData = Object.fromEntries(
+    Object.entries(data).filter(([, value]) => value !== undefined),
+  );
+  await saveProducts(
+    local.map((product) =>
+      product.id === productId
+        ? ({ ...product, ...localData, id: productId } as Product)
+        : product,
+    ),
+  );
 }
 
 export async function deleteProductImage(imageUrl: string): Promise<void> {

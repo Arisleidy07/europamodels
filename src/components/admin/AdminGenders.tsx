@@ -18,7 +18,7 @@ import toast from "react-hot-toast";
 import type { Gender } from "@/types";
 
 export default function AdminGenders() {
-  const { genders, loading } = useCatalogData();
+  const { genders, loading, removeGender } = useCatalogData();
   const [editing, setEditing] = useState<Gender | null>(null);
   const [newName, setNewName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,6 +53,7 @@ export default function AdminGenders() {
     if (!deleteTarget) return;
     try {
       await deleteGender(deleteTarget.id);
+      removeGender(deleteTarget.id);
       toast.success("Género eliminado");
     } catch (err: any) {
       toast.error(err.message || "Error al eliminar");
@@ -94,7 +95,11 @@ export default function AdminGenders() {
             />
           </div>
           <Button onClick={handleSave} disabled={saving || !newName.trim()}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
             Agregar
           </Button>
         </div>
@@ -134,7 +139,9 @@ export default function AdminGenders() {
                   {editing?.id === gender.id ? (
                     <Input
                       value={editing.nombre}
-                      onChange={(e) => setEditing({ ...editing, nombre: e.target.value })}
+                      onChange={(e) =>
+                        setEditing({ ...editing, nombre: e.target.value })
+                      }
                       onKeyDown={(e) => e.key === "Enter" && handleSave()}
                     />
                   ) : (

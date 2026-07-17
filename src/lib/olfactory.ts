@@ -16,16 +16,29 @@ import {
   deleteObject,
 } from "firebase/storage";
 import { getFirebaseDb, getFirebaseStorage } from "@/lib/firebase";
+import {
+  getOlfactoryNotes as getCachedOlfactoryNotes,
+  saveOlfactoryNotes,
+} from "@/lib/localDb";
 import type { OlfactoryNote, OlfactoryCategory } from "@/types";
 
 export async function getOlfactoryNotes(): Promise<OlfactoryNote[]> {
+  const cached = await getCachedOlfactoryNotes();
+  if (typeof navigator !== "undefined" && !navigator.onLine) return cached;
+
   const db = getFirebaseDb();
-  if (!db) throw new Error("Firebase Firestore no está configurado");
-  const snap = await getDocs(collection(db, "olfactoryNotes"));
-  return snap.docs.map((d) => ({
-    ...(d.data() as Omit<OlfactoryNote, "id">),
-    id: d.id,
-  }));
+  if (!db) return cached;
+  try {
+    const snap = await getDocs(collection(db, "olfactoryNotes"));
+    const notes = snap.docs.map((d) => ({
+      ...(d.data() as Omit<OlfactoryNote, "id">),
+      id: d.id,
+    }));
+    await saveOlfactoryNotes(notes);
+    return notes;
+  } catch {
+    return cached;
+  }
 }
 
 export async function getOlfactoryNotesByCategory(
@@ -37,11 +50,22 @@ export async function getOlfactoryNotesByCategory(
     collection(db, "olfactoryNotes"),
     where("categoria", "==", categoria),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({
-    ...(d.data() as Omit<OlfactoryNote, "id">),
-    id: d.id,
-  }));
+  try {
+    const snap = await getDocs(q);
+    const notes = snap.docs.map((d) => ({
+      ...(d.data() as Omit<OlfactoryNote, "id">),
+      id: d.id,
+    }));
+    const cached = await getCachedOlfactoryNotes();
+    const otherCategories = cached.filter(
+      (note) => note.categoria !== categoria,
+    );
+    await saveOlfactoryNotes([...otherCategories, ...notes]);
+    return notes;
+  } catch {
+    const cached = await getCachedOlfactoryNotes();
+    return cached.filter((note) => note.categoria === categoria);
+  }
 }
 
 export async function createOlfactoryNote(
@@ -49,11 +73,18 @@ export async function createOlfactoryNote(
 ): Promise<OlfactoryNote> {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
+  const fechaCreacion = new Date().toISOString();
   const docRef = await addDoc(collection(db, "olfactoryNotes"), {
     ...data,
-    fechaCreacion: new Date().toISOString(),
+    fechaCreacion,
   });
-  return { ...data, id: docRef.id, fechaCreacion: new Date().toISOString() };
+  const created = { ...data, id: docRef.id, fechaCreacion };
+  const cached = await getCachedOlfactoryNotes();
+  await saveOlfactoryNotes([
+    ...cached.filter((note) => note.id !== created.id),
+    created,
+  ]);
+  return created;
 }
 
 export async function updateOlfactoryNote(
@@ -63,12 +94,18 @@ export async function updateOlfactoryNote(
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
   await updateDoc(doc(db, "olfactoryNotes", id), data);
+  const cached = await getCachedOlfactoryNotes();
+  await saveOlfactoryNotes(
+    cached.map((note) => (note.id === id ? { ...note, ...data, id } : note)),
+  );
 }
 
 export async function deleteOlfactoryNote(id: string): Promise<void> {
   const db = getFirebaseDb();
   if (!db) throw new Error("Firebase Firestore no está configurado");
   await deleteDoc(doc(db, "olfactoryNotes", id));
+  const cached = await getCachedOlfactoryNotes();
+  await saveOlfactoryNotes(cached.filter((note) => note.id !== id));
 }
 
 export async function uploadOlfactoryImage(

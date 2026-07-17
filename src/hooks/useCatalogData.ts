@@ -18,11 +18,15 @@ import {
   getSubcategories,
   getBrands,
   getGenders,
+  getOlfactoryNotes,
+  getQuotes,
   saveProducts,
   saveCategories,
   saveSubcategories,
   saveBrands,
   saveGenders,
+  saveOlfactoryNotes,
+  saveQuotes,
 } from "@/lib/localDb";
 import { cacheProductImages } from "@/lib/offlineCache";
 import type {
@@ -31,6 +35,8 @@ import type {
   Subcategory,
   Brand,
   Gender,
+  OlfactoryNote,
+  Quote,
   ProductWithRelations,
 } from "@/types";
 
@@ -40,9 +46,15 @@ interface CatalogDataValue {
   subcategories: Subcategory[];
   brands: Brand[];
   genders: Gender[];
+  olfactoryNotes: OlfactoryNote[];
+  quotes: Quote[];
   loading: boolean;
   markDeleted: (id: string) => void;
+  removeCategory: (id: string) => void;
+  removeSubcategory: (id: string) => void;
   removeBrand: (id: string) => void;
+  removeGender: (id: string) => void;
+  removeOlfactoryNote: (id: string) => void;
 }
 
 const CatalogDataContext = createContext<CatalogDataValue | null>(null);
@@ -53,6 +65,8 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [genders, setGenders] = useState<Gender[]>([]);
+  const [olfactoryNotes, setOlfactoryNotes] = useState<OlfactoryNote[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Track optimistically deleted IDs so stale cache snapshots can't restore them
@@ -63,6 +77,8 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
   const latestSubs = useRef<Subcategory[]>([]);
   const latestBrs = useRef<Brand[]>([]);
   const latestGenders = useRef<Gender[]>([]);
+  const latestOlfactoryNotes = useRef<OlfactoryNote[]>([]);
+  const latestQuotes = useRef<Quote[]>([]);
 
   const combine = useCallback(() => {
     const prods = latestProds.current;
@@ -70,6 +86,8 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     const subs = latestSubs.current;
     const brs = latestBrs.current;
     const genders = latestGenders.current;
+    const notes = latestOlfactoryNotes.current;
+    const savedQuotes = latestQuotes.current;
 
     const withRelations = prods.map((p) => ({
       ...p,
@@ -83,6 +101,16 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     setSubcategories([...subs].sort((a, b) => a.orden - b.orden));
     setBrands([...brs].sort((a, b) => a.orden - b.orden));
     setGenders([...genders].sort((a, b) => a.orden - b.orden));
+    setOlfactoryNotes(
+      [...notes].sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    );
+    setQuotes(
+      [...savedQuotes].sort(
+        (a, b) =>
+          new Date(b.fechaCreacion).getTime() -
+          new Date(a.fechaCreacion).getTime(),
+      ),
+    );
   }, []);
 
   useEffect(() => {
@@ -92,15 +120,19 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     let unsubSubcategories = () => {};
     let unsubBrands = () => {};
     let unsubGenders = () => {};
+    let unsubOlfactoryNotes = () => {};
+    let unsubQuotes = () => {};
 
     const setup = async () => {
       try {
-        const [lp, lc, ls, lb, lg] = await Promise.all([
+        const [lp, lc, ls, lb, lg, lo, lq] = await Promise.all([
           getProducts(),
           getCategories(),
           getSubcategories(),
           getBrands(),
           getGenders(),
+          getOlfactoryNotes(),
+          getQuotes(),
         ]);
         if (!active) return;
         latestProds.current = lp;
@@ -108,6 +140,8 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
         latestSubs.current = ls;
         latestBrs.current = lb;
         latestGenders.current = lg;
+        latestOlfactoryNotes.current = lo;
+        latestQuotes.current = lq;
         combine();
         if (lp.length > 0 || !navigator.onLine) setLoading(false);
       } catch {
@@ -189,6 +223,37 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
           },
           handleError,
         );
+
+        unsubOlfactoryNotes = onSnapshot(
+          collection(firestore, "olfactoryNotes"),
+          (snap) => {
+            const data = snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as OlfactoryNote,
+            );
+            latestOlfactoryNotes.current = data;
+            void saveOlfactoryNotes(data);
+            combine();
+          },
+          handleError,
+        );
+
+        unsubQuotes = onSnapshot(
+          collection(firestore, "quotes"),
+          (snap) => {
+            const remote = snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as Quote,
+            );
+            const remoteIds = new Set(remote.map((quote) => quote.id));
+            const localOnly = latestQuotes.current.filter(
+              (quote) => !remoteIds.has(quote.id),
+            );
+            const data = [...remote, ...localOnly];
+            latestQuotes.current = data;
+            void saveQuotes(data);
+            combine();
+          },
+          handleError,
+        );
       } catch {
         // Offline: local data is already loaded
         setLoading(false);
@@ -204,16 +269,24 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
       unsubSubcategories();
       unsubBrands();
       unsubGenders();
+      unsubOlfactoryNotes();
+      unsubQuotes();
     };
   }, [combine]);
 
   useEffect(() => {
-    const urls = products.flatMap((product) => [
-      ...product.imagenes,
-      product.imagenInformativa || "",
-    ]);
+    const urls = [
+      ...products.flatMap((product) => [
+        ...product.imagenes,
+        product.imagenInformativa || "",
+      ]),
+      ...olfactoryNotes.map((note) => note.imagen || ""),
+      ...quotes.flatMap((quote) =>
+        quote.productos.map((product) => product.imagen),
+      ),
+    ];
     void cacheProductImages(urls);
-  }, [products]);
+  }, [olfactoryNotes, products, quotes]);
 
   const markDeleted = useCallback(
     (id: string) => {
@@ -224,10 +297,54 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     [combine],
   );
 
+  const removeCategory = useCallback(
+    (id: string) => {
+      latestCats.current = latestCats.current.filter(
+        (category) => category.id !== id,
+      );
+      void saveCategories(latestCats.current);
+      combine();
+    },
+    [combine],
+  );
+
+  const removeSubcategory = useCallback(
+    (id: string) => {
+      latestSubs.current = latestSubs.current.filter(
+        (subcategory) => subcategory.id !== id,
+      );
+      void saveSubcategories(latestSubs.current);
+      combine();
+    },
+    [combine],
+  );
+
   const removeBrand = useCallback(
     (id: string) => {
       latestBrs.current = latestBrs.current.filter((brand) => brand.id !== id);
-      saveBrands(latestBrs.current);
+      void saveBrands(latestBrs.current);
+      combine();
+    },
+    [combine],
+  );
+
+  const removeGender = useCallback(
+    (id: string) => {
+      latestGenders.current = latestGenders.current.filter(
+        (gender) => gender.id !== id,
+      );
+      void saveGenders(latestGenders.current);
+      combine();
+    },
+    [combine],
+  );
+
+  const removeOlfactoryNote = useCallback(
+    (id: string) => {
+      latestOlfactoryNotes.current = latestOlfactoryNotes.current.filter(
+        (note) => note.id !== id,
+      );
+      void saveOlfactoryNotes(latestOlfactoryNotes.current);
       combine();
     },
     [combine],
@@ -242,9 +359,15 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
         subcategories,
         brands,
         genders,
+        olfactoryNotes,
+        quotes,
         loading,
         markDeleted,
+        removeCategory,
+        removeSubcategory,
         removeBrand,
+        removeGender,
+        removeOlfactoryNote,
       },
     },
     children,
