@@ -34,3 +34,5 @@ yarn-error.log*
 # Misc
 *.pem
 *.tsbuildinfo
+.vercel
+.env*.local
