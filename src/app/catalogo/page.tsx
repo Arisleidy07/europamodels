@@ -413,24 +413,36 @@ export default function CatalogoPage() {
           onSelectProduct={(p) => router.push(`/producto/${p.id}`)}
         />
 
-        <div className="sticky top-16 z-40 border-b border-border/70 bg-background/95 px-4 py-2 backdrop-blur-md sm:top-[72px] lg:px-8">
+        <div className="sticky top-16 z-40 border-b border-border/70 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:top-[72px] lg:px-8">
           <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-3">
             <button
               onClick={() => setCatSidebarOpen(true)}
               className={cn(
-                "flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
+                "relative flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
                 selectedCategory !== "todos"
                   ? "border-primary bg-primary text-white"
                   : "border-border/70 bg-white/95 text-foreground hover:bg-white hover:shadow-xl",
               )}
             >
               <ListFilter className="h-4 w-4" />
-              <span className="hidden sm:inline">Categorías</span>
-              <span className="sm:hidden">Categorías</span>
+              Categorías
             </button>
 
             <h1 className="truncate text-center text-sm font-bold text-foreground sm:text-base">
-              Catálogo
+              {(() => {
+                if (search) return `Resultados para "${search}"`;
+                if (selectedSubcategory !== "todos") {
+                  const sub = subcategories.find(
+                    (s) => s.id === selectedSubcategory,
+                  );
+                  return sub?.nombre || "Catálogo";
+                }
+                if (selectedCategory !== "todos") {
+                  const cat = categories.find((c) => c.id === selectedCategory);
+                  return cat?.nombre || "Catálogo";
+                }
+                return "Todos los productos";
+              })()}
             </h1>
 
             <button
