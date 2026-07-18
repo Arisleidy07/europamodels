@@ -20,6 +20,11 @@ import {
   Search,
   Package,
 } from "lucide-react";
+import {
+  ProductImageGallery,
+  type GalleryImage,
+} from "@/components/ProductImageGallery";
+import { renameProductImage } from "@/lib/products";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
@@ -1272,13 +1277,6 @@ interface ProductFormProps {
   onSaved: () => void;
 }
 
-interface ImageItem {
-  id: string;
-  type: "url" | "file";
-  url: string;
-  file?: File;
-}
-
 const initialProduct: Partial<Product> = {
   nombre: "",
   descripcion: "",
@@ -1387,15 +1385,14 @@ export function ProductForm({
     product ? { ...initialProduct, ...product } : { ...initialProduct },
   );
 
-  const initialImages = useMemo<ImageItem[]>(() => {
+  const initialImages = useMemo<GalleryImage[]>(() => {
     return (product?.imagenes || []).map((url, i) => ({
-      id: `existing-${i}`,
-      type: "url" as const,
+      id: `existing-${product?.id || "new"}-${i}`,
       url,
     }));
-  }, [product?.imagenes]);
+  }, [product?.imagenes, product?.id]);
 
-  const [images, setImages] = useState<ImageItem[]>(initialImages);
+  const [images, setImages] = useState<GalleryImage[]>(initialImages);
 
   // Auto-save draft every 5 seconds for new products (never auto-restore)
   useEffect(() => {
@@ -1404,7 +1401,7 @@ export function ProductForm({
       if (form.nombre || form.categoriaId || form.marcaId) {
         // Include already-uploaded image URLs in the draft snapshot
         const imageUrls = images
-          .filter((img) => img.type === "url")
+          .filter((img) => !img.file)
           .map((img) => img.url);
         const snapshot = { ...form, imagenes: imageUrls };
         const id = saveDraft(snapshot, currentDraftId.current);
@@ -1421,7 +1418,6 @@ export function ProductForm({
   const infoImageRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [tagInput, setTagInput] = useState("");
-  const [dragging, setDragging] = useState<string | null>(null);
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [showNewBrand, setShowNewBrand] = useState(false);
   const [showNewSubcategory, setShowNewSubcategory] = useState(false);
@@ -1446,52 +1442,8 @@ export function ProductForm({
     (s) => s.categoriaId === form.categoriaId && s.activo,
   );
 
-  const handleFiles = (selected: FileList | null) => {
-    if (!selected) return;
-    const newFiles = Array.from(selected).filter((f) =>
-      f.type.startsWith("image/"),
-    );
-    if (newFiles.length === 0) return;
-    const newItems: ImageItem[] = newFiles.map((file) => ({
-      id: `new-${generateId()}`,
-      type: "file",
-      url: URL.createObjectURL(file),
-      file,
-    }));
-    setImages((prev) => [...prev, ...newItems]);
-  };
-
-  const removeImage = (id: string) => {
-    const img = images.find((i) => i.id === id);
-    if (img && img.type === "url") {
-      deleteProductImage(img.url);
-    }
-    setImages((prev) => prev.filter((i) => i.id !== id));
-  };
-
-  const moveImage = (from: number, to: number) => {
-    if (to < 0 || to >= images.length) return;
-    const arr = [...images];
-    const [removed] = arr.splice(from, 1);
-    arr.splice(to, 0, removed);
-    setImages(arr);
-  };
-
-  const setMainImage = (index: number) => {
-    if (index === 0) return;
-    const arr = [...images];
-    const [selected] = arr.splice(index, 1);
-    arr.unshift(selected);
-    setImages(arr);
-  };
-
-  const handleDragStart = (id: string) => setDragging(id);
-  const handleDragOver = (e: React.DragEvent, id: string) => {
-    e.preventDefault();
-    if (dragging === id) return;
-    const from = images.findIndex((i) => i.id === dragging);
-    const to = images.findIndex((i) => i.id === id);
-    if (from >= 0 && to >= 0) moveImage(from, to);
+  const onImagesChange = (next: GalleryImage[]) => {
+    setImages(next);
   };
 
   const addTag = () => {
@@ -1567,27 +1519,50 @@ export function ProductForm({
 
     setLoading(true);
     try {
-      const existingUrls = images
-        .filter((i) => i.type === "url")
-        .map((i) => i.url);
-      const fileItems = images.filter((i) => i.type === "file");
-      let uploadedUrls: string[] = [];
+      const tempId = product?.id || generateId();
+      const fileItems = images.filter((i) => i.file);
+      const renamedItems = images.filter(
+        (i) =>
+          !i.file &&
+          i.originalUrl &&
+          i.originalName &&
+          i.name &&
+          i.name !== i.originalName,
+      );
+
+      let uploadedUrls: { id: string; url: string }[] = [];
       if (fileItems.length > 0) {
-        const tempId = product?.id || generateId();
-        uploadedUrls = await uploadProductImages(
-          tempId,
-          fileItems.map((i) => i.file!),
-        );
+        uploadedUrls = (
+          await uploadProductImages(
+            tempId,
+            fileItems.map((i) => ({ file: i.file!, name: i.name })),
+          )
+        ).map((url, idx) => ({ id: fileItems[idx].id, url }));
       }
 
-      const orderedUrls: string[] = [];
-      let fileIdx = 0;
-      images.forEach((img) => {
-        if (img.type === "url") orderedUrls.push(img.url);
-        else if (img.type === "file" && uploadedUrls[fileIdx]) {
-          orderedUrls.push(uploadedUrls[fileIdx]);
-          fileIdx++;
+      const renamedUrls: { id: string; url: string }[] = [];
+      for (const item of renamedItems) {
+        try {
+          const newUrl = await renameProductImage(
+            tempId,
+            item.originalUrl!,
+            item.name!,
+          );
+          renamedUrls.push({ id: item.id, url: newUrl });
+        } catch {
+          renamedUrls.push({ id: item.id, url: item.url });
         }
+      }
+
+      const urlById = new Map<string, string>([
+        ...uploadedUrls.map((u) => [u.id, u.url] as const),
+        ...renamedUrls.map((u) => [u.id, u.url] as const),
+      ]);
+
+      const orderedUrls: string[] = [];
+      images.forEach((img) => {
+        if (urlById.has(img.id)) orderedUrls.push(urlById.get(img.id)!);
+        else orderedUrls.push(img.url);
       });
 
       // Upload informative image if a new file was selected
@@ -2033,84 +2008,13 @@ export function ProductForm({
             <section id="section-imagenes" className="px-6 py-7">
               <SectionHeader label="Imágenes del producto" icon="🖼️" />
               <div className="mt-4">
-                <div
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    handleFiles(e.dataTransfer.files);
-                  }}
-                  onClick={() => fileRef.current?.click()}
-                  className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-muted/20 py-10 transition-all hover:border-primary/50 hover:bg-primary/5"
-                >
-                  <Upload className="h-7 w-7 text-muted-foreground/50" />
-                  <p className="mt-2 text-sm font-semibold text-foreground">
-                    Subir imágenes
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Clic o arrastra aquí · Múltiples imágenes
-                  </p>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => handleFiles(e.target.files)}
-                  />
-                </div>
-
-                {images.length > 0 && (
-                  <div className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                    {images.map((img, idx) => {
-                      const isMain = idx === 0;
-                      return (
-                        <div
-                          key={img.id}
-                          draggable
-                          onDragStart={() => handleDragStart(img.id)}
-                          onDragOver={(e) => handleDragOver(e, img.id)}
-                          onDragEnd={() => setDragging(null)}
-                          className={cn(
-                            "group relative aspect-square cursor-move overflow-hidden rounded-xl border-2 bg-gray-50 transition-all",
-                            isMain
-                              ? "border-primary ring-2 ring-primary/20"
-                              : "border-border",
-                          )}
-                        >
-                          <img
-                            src={img.url}
-                            alt=""
-                            className="h-full w-full object-cover"
-                          />
-                          {isMain && (
-                            <div className="absolute left-1.5 top-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
-                              PORTADA
-                            </div>
-                          )}
-                          <div className="absolute inset-0 flex items-center justify-center gap-1.5 bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
-                            {!isMain && (
-                              <button
-                                type="button"
-                                onClick={() => setMainImage(idx)}
-                                className="rounded-full bg-white p-1.5 text-primary shadow-sm"
-                                title="Portada"
-                              >
-                                <Star className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => removeImage(img.id)}
-                              className="rounded-full bg-white p-1.5 text-red-500 shadow-sm"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                <ProductImageGallery
+                  images={images}
+                  onImagesChange={onImagesChange}
+                  editable
+                  productName={form.nombre || product?.nombre || "producto"}
+                  aspectRatio="1 / 1"
+                />
               </div>
             </section>
 
@@ -2420,11 +2324,10 @@ export function ProductForm({
                           setForm({ ...initialProduct, ...draft.data });
                           currentDraftId.current = draft.id;
                           // Restore images from draft URLs
-                          const draftImages: ImageItem[] = (
+                          const draftImages: GalleryImage[] = (
                             draft.data.imagenes || []
                           ).map((url: string, i: number) => ({
                             id: `draft-${draft.id}-${i}`,
-                            type: "url" as const,
                             url,
                           }));
                           setImages(draftImages);

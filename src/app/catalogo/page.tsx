@@ -413,33 +413,33 @@ export default function CatalogoPage() {
           onSelectProduct={(p) => router.push(`/producto/${p.id}`)}
         />
 
-        <div className="sticky top-16 z-40 border-b border-border/70 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:top-[72px] lg:px-8">
-          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <div className="sticky top-16 z-40 border-b border-border bg-background px-4 py-2.5 shadow-sm sm:top-[72px] lg:px-8">
+          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
             <button
               onClick={() => setCatSidebarOpen(true)}
               className={cn(
-                "relative flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
+                "flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-md shadow-slate-900/5 transition-all",
                 selectedCategory !== "todos"
                   ? "border-primary bg-primary text-white"
-                  : "border-border/70 bg-white/95 text-foreground hover:bg-white hover:shadow-xl",
+                  : "border-border bg-white text-foreground hover:bg-gray-50 hover:shadow-lg",
               )}
             >
               <ListFilter className="h-4 w-4" />
-              Categorías
+              <span className="whitespace-nowrap">Categorías</span>
             </button>
 
             <h1 className="truncate text-center text-sm font-bold text-foreground sm:text-base">
               {(() => {
-                if (search) return `Resultados para "${search}"`;
+                if (search.trim()) return `Resultados para "${search.trim()}"`;
                 if (selectedSubcategory !== "todos") {
                   const sub = subcategories.find(
                     (s) => s.id === selectedSubcategory,
                   );
-                  return sub?.nombre || "Catálogo";
+                  return sub?.nombre || "Todos los productos";
                 }
                 if (selectedCategory !== "todos") {
                   const cat = categories.find((c) => c.id === selectedCategory);
-                  return cat?.nombre || "Catálogo";
+                  return cat?.nombre || "Todos los productos";
                 }
                 return "Todos los productos";
               })()}
@@ -448,21 +448,16 @@ export default function CatalogoPage() {
             <button
               onClick={() => setFilterSidebarOpen(true)}
               className={cn(
-                "relative ml-auto flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-lg shadow-slate-900/10 backdrop-blur-md transition-all",
+                "relative ml-auto flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-md shadow-slate-900/5 transition-all",
                 activeFilterCount > 0
                   ? "border-primary bg-primary text-white"
-                  : "border-border/70 bg-white/95 text-foreground hover:bg-white hover:shadow-xl",
+                  : "border-border bg-white text-foreground hover:bg-gray-50 hover:shadow-lg",
               )}
             >
               <SlidersHorizontal className="h-4 w-4" />
-              Filtros
+              <span className="whitespace-nowrap">Filtros</span>
               {activeFilterCount > 0 && (
-                <span
-                  className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold",
-                    activeFilterCount > 0 ? "bg-white text-primary" : "",
-                  )}
-                >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary">
                   {activeFilterCount}
                 </span>
               )}

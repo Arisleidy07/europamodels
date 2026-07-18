@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCatalogData } from "@/hooks/useCatalogData";
@@ -8,6 +8,10 @@ import { useSettings } from "@/context/SettingsContext";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
 import { Header } from "@/components/Header";
+import {
+  ProductImageGallery,
+  type GalleryImage,
+} from "@/components/ProductImageGallery";
 import { formatCurrency, cn, shareContent, downloadFile } from "@/lib/utils";
 import {
   Share2,
@@ -112,6 +116,15 @@ export default function PublicProductPage() {
     product.imagenes.length > 0
       ? product.imagenes
       : ["/placeholder-product.svg"];
+
+  const galleryImages: GalleryImage[] = useMemo(
+    () =>
+      images.map((url, i) => ({
+        id: `public-${product.id}-${i}`,
+        url,
+      })),
+    [images, product.id],
+  );
   const variants = product.variantes || [];
   const displayPrice =
     selectedVariant?.precio || product.precioOferta || product.precio || 0;
@@ -228,107 +241,26 @@ export default function PublicProductPage() {
         <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr] lg:gap-10 xl:grid-cols-[1.25fr_440px]">
           {/* ── Left: Gallery ── */}
           <div className="space-y-3">
-            {/* Main image */}
-            <div
-              className="group relative cursor-zoom-in overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
-              onClick={() => setLightboxOpen(true)}
-              style={{ aspectRatio: "1 / 1" }}
-            >
-              <motion.img
-                key={currentImage}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.18 }}
-                src={images[currentImage]}
-                alt={product.nombre}
-                className="h-full w-full object-contain p-4 transition-transform duration-300 group-hover:scale-[1.04] sm:p-8"
-              />
+            <ProductImageGallery
+              images={galleryImages}
+              onCurrentImageChange={setCurrentImage}
+              productName={product.nombre}
+              aspectRatio="1 / 1"
+            />
 
-              {/* Zoom hint */}
-              <div className="absolute bottom-3 right-3 flex items-center gap-1 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100">
-                <ZoomIn className="h-3 w-3" /> Ampliar
-              </div>
-
-              {/* Badges */}
-              <div className="absolute left-3 top-3 flex flex-col gap-1.5">
-                {product.oferta && discountPct > 0 && (
-                  <span className="rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow">
-                    -{discountPct}%
-                  </span>
-                )}
-                {product.nuevo && (
-                  <span className="rounded-full bg-blue-500 px-2.5 py-1 text-xs font-bold text-white shadow">
-                    Nuevo
-                  </span>
-                )}
-              </div>
-
-              {/* Gallery arrows */}
-              {images.length > 1 && (
-                <>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      prev();
-                    }}
-                    className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md opacity-0 transition-all group-hover:opacity-100 hover:scale-110"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      next();
-                    }}
-                    className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md opacity-0 transition-all group-hover:opacity-100 hover:scale-110"
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                  {/* Dots */}
-                  <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-                    {images.map((_, i) => (
-                      <button
-                        key={i}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCurrentImage(i);
-                        }}
-                        className={cn(
-                          "h-1.5 rounded-full transition-all",
-                          i === currentImage
-                            ? "w-5 bg-primary"
-                            : "w-1.5 bg-black/20 hover:bg-black/40",
-                        )}
-                      />
-                    ))}
-                  </div>
-                </>
+            {/* Badges */}
+            <div className="flex gap-1.5">
+              {product.oferta && discountPct > 0 && (
+                <span className="rounded-full bg-red-500 px-2.5 py-1 text-xs font-bold text-white shadow">
+                  -{discountPct}%
+                </span>
+              )}
+              {product.nuevo && (
+                <span className="rounded-full bg-blue-500 px-2.5 py-1 text-xs font-bold text-white shadow">
+                  Nuevo
+                </span>
               )}
             </div>
-
-            {/* Thumbnails */}
-            {images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentImage(idx)}
-                    className={cn(
-                      "h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl border-2 bg-white transition-all sm:h-20 sm:w-20",
-                      idx === currentImage
-                        ? "border-primary shadow-sm ring-2 ring-primary/20"
-                        : "border-border opacity-50 hover:opacity-100",
-                    )}
-                  >
-                    <img
-                      src={img}
-                      alt=""
-                      className="h-full w-full object-contain p-1"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
 
             {/* Informative image — desktop under gallery */}
             {product.imagenInformativa && (
@@ -617,79 +549,6 @@ export default function PublicProductPage() {
           </div>
         </div>
       </div>
-
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightboxOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setLightboxOpen(false)}
-            className="fixed inset-0 z-[9999] flex cursor-zoom-out flex-col items-center justify-center bg-black/95 p-4"
-          >
-            <motion.img
-              key={currentImage}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-              src={images[currentImage]}
-              alt={product.nombre}
-              className="max-h-[85vh] max-w-[90vw] rounded-xl object-contain"
-              onClick={(e) => e.stopPropagation()}
-            />
-            <button
-              onClick={() => setLightboxOpen(false)}
-              className="absolute right-5 top-5 rounded-full bg-white/20 p-2.5 text-white backdrop-blur-sm hover:bg-white/30"
-            >
-              <X className="h-6 w-6" />
-            </button>
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    prev();
-                  }}
-                  className="absolute left-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
-                >
-                  <ChevronLeft className="h-6 w-6" />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    next();
-                  }}
-                  className="absolute right-4 top-1/2 flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-white/30"
-                >
-                  <ChevronRight className="h-6 w-6" />
-                </button>
-                <div className="absolute bottom-6 left-1/2 flex -translate-x-1/2 gap-2">
-                  {images.map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setCurrentImage(i);
-                      }}
-                      className={cn(
-                        "h-1.5 rounded-full transition-all",
-                        i === currentImage
-                          ? "w-8 bg-white"
-                          : "w-1.5 bg-white/40",
-                      )}
-                    />
-                  ))}
-                </div>
-                <div className="absolute bottom-6 right-6 text-sm font-medium text-white/60">
-                  {currentImage + 1} / {images.length}
-                </div>
-              </>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
