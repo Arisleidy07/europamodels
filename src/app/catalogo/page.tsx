@@ -381,6 +381,37 @@ export default function CatalogoPage() {
 
   const hasMore = pagedProducts.length < filteredProducts.length;
 
+  const catalogTitle = useMemo(() => {
+    if (search.trim()) return `Resultados para "${search.trim()}"`;
+    if (selectedSubcategory !== "todos") {
+      return (
+        subcategories.find((sub) => sub.id === selectedSubcategory)?.nombre ||
+        "Todos los productos"
+      );
+    }
+    if (selectedCategory !== "todos") {
+      return (
+        categories.find((category) => category.id === selectedCategory)
+          ?.nombre || "Todos los productos"
+      );
+    }
+    if (selectedBrand !== "todos") {
+      return (
+        brands.find((brand) => brand.id === selectedBrand)?.nombre ||
+        "Todos los productos"
+      );
+    }
+    return "Todos los productos";
+  }, [
+    brands,
+    categories,
+    search,
+    selectedBrand,
+    selectedCategory,
+    selectedSubcategory,
+    subcategories,
+  ]);
+
   const handleAdd = useCallback(
     (product: ProductWithRelations) => {
       addToCart({
@@ -413,49 +444,32 @@ export default function CatalogoPage() {
           onSelectProduct={(p) => router.push(`/producto/${p.id}`)}
         />
 
-        <div className="sticky top-16 z-40 border-b border-border bg-background px-4 py-2.5 shadow-sm sm:top-[72px] lg:px-8">
-          <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-3">
+        <div className="sticky top-16 z-40 sm:top-[72px]">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 lg:px-8">
             <button
               onClick={() => setCatSidebarOpen(true)}
               className={cn(
-                "flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-md shadow-slate-900/5 transition-all",
+                "flex h-10 min-w-[132px] items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold shadow-md shadow-slate-900/10 transition-all active:scale-95",
                 selectedCategory !== "todos"
                   ? "border-primary bg-primary text-white"
                   : "border-border bg-white text-foreground hover:bg-gray-50 hover:shadow-lg",
               )}
             >
               <ListFilter className="h-4 w-4" />
-              <span className="whitespace-nowrap">Categorías</span>
+              <span>Categorías</span>
             </button>
-
-            <h1 className="truncate text-center text-sm font-bold text-foreground sm:text-base">
-              {(() => {
-                if (search.trim()) return `Resultados para "${search.trim()}"`;
-                if (selectedSubcategory !== "todos") {
-                  const sub = subcategories.find(
-                    (s) => s.id === selectedSubcategory,
-                  );
-                  return sub?.nombre || "Todos los productos";
-                }
-                if (selectedCategory !== "todos") {
-                  const cat = categories.find((c) => c.id === selectedCategory);
-                  return cat?.nombre || "Todos los productos";
-                }
-                return "Todos los productos";
-              })()}
-            </h1>
 
             <button
               onClick={() => setFilterSidebarOpen(true)}
               className={cn(
-                "relative ml-auto flex items-center justify-center gap-2 rounded-full border px-4 py-2.5 text-sm font-semibold shadow-md shadow-slate-900/5 transition-all",
+                "relative flex h-10 min-w-[132px] items-center justify-center gap-2 rounded-full border px-4 text-sm font-semibold shadow-md shadow-slate-900/10 transition-all active:scale-95",
                 activeFilterCount > 0
                   ? "border-primary bg-primary text-white"
                   : "border-border bg-white text-foreground hover:bg-gray-50 hover:shadow-lg",
               )}
             >
               <SlidersHorizontal className="h-4 w-4" />
-              <span className="whitespace-nowrap">Filtros</span>
+              <span>Filtros</span>
               {activeFilterCount > 0 && (
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-[10px] font-bold text-primary">
                   {activeFilterCount}
@@ -466,6 +480,9 @@ export default function CatalogoPage() {
         </div>
 
         <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-4 lg:px-8">
+          <h1 className="mb-4 text-lg font-bold text-foreground sm:text-xl">
+            {catalogTitle}
+          </h1>
           {loading ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 12 }).map((_, i) => (

@@ -1601,6 +1601,12 @@ export function ProductForm({
 
       if (product) {
         await updateProduct(product.id, payload);
+        const removedImageUrls = product.imagenes.filter(
+          (url) => !orderedUrls.includes(url),
+        );
+        await Promise.all(
+          removedImageUrls.map((url) => deleteProductImage(url)),
+        );
         toast.success("Producto actualizado");
       } else {
         await createProduct(payload);

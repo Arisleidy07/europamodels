@@ -85,6 +85,18 @@ export default function PublicProductPage() {
     return () => window.removeEventListener("keydown", fn);
   }, []);
 
+  const galleryImages = useMemo<GalleryImage[]>(
+    () =>
+      (product?.imagenes.length
+        ? product.imagenes
+        : ["/placeholder-product.svg"]
+      ).map((url, index) => ({
+        id: `public-${product?.id ?? "pending"}-${index}`,
+        url,
+      })),
+    [product?.id, product?.imagenes],
+  );
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
@@ -117,14 +129,6 @@ export default function PublicProductPage() {
       ? product.imagenes
       : ["/placeholder-product.svg"];
 
-  const galleryImages: GalleryImage[] = useMemo(
-    () =>
-      images.map((url, i) => ({
-        id: `public-${product.id}-${i}`,
-        url,
-      })),
-    [images, product.id],
-  );
   const variants = product.variantes || [];
   const displayPrice =
     selectedVariant?.precio || product.precioOferta || product.precio || 0;
