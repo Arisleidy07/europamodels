@@ -67,14 +67,15 @@ export default function PublicProductPage() {
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (!id) return;
-    const found = products.find((p) => p.id === id);
-    if (found) {
-      setProduct(found);
-      setCurrentImage(0);
-      setSelectedVariant(null);
-      setAdded(false);
+    if (!id) {
+      setProduct(null);
+      return;
     }
+    const found = products.find((p) => p.id === id) || null;
+    setProduct(found);
+    setCurrentImage(0);
+    setSelectedVariant(null);
+    setAdded(false);
   }, [id, products]);
 
   useEffect(() => {
