@@ -19,6 +19,7 @@ import {
   getBrands,
   getGenders,
   getOlfactoryNotes,
+  getSizes,
   getQuotes,
   saveProducts,
   saveCategories,
@@ -26,6 +27,7 @@ import {
   saveBrands,
   saveGenders,
   saveOlfactoryNotes,
+  saveSizes,
   saveQuotes,
 } from "@/lib/localDb";
 import { cacheProductImages } from "@/lib/offlineCache";
@@ -36,6 +38,7 @@ import type {
   Brand,
   Gender,
   OlfactoryNote,
+  Size,
   Quote,
   ProductWithRelations,
 } from "@/types";
@@ -47,6 +50,7 @@ interface CatalogDataValue {
   brands: Brand[];
   genders: Gender[];
   olfactoryNotes: OlfactoryNote[];
+  sizes: Size[];
   quotes: Quote[];
   loading: boolean;
   markDeleted: (id: string) => void;
@@ -55,6 +59,7 @@ interface CatalogDataValue {
   removeBrand: (id: string) => void;
   removeGender: (id: string) => void;
   removeOlfactoryNote: (id: string) => void;
+  removeSize: (id: string) => void;
 }
 
 const CatalogDataContext = createContext<CatalogDataValue | null>(null);
@@ -66,6 +71,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [genders, setGenders] = useState<Gender[]>([]);
   const [olfactoryNotes, setOlfactoryNotes] = useState<OlfactoryNote[]>([]);
+  const [sizes, setSizes] = useState<Size[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -78,6 +84,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
   const latestBrs = useRef<Brand[]>([]);
   const latestGenders = useRef<Gender[]>([]);
   const latestOlfactoryNotes = useRef<OlfactoryNote[]>([]);
+  const latestSizes = useRef<Size[]>([]);
   const latestQuotes = useRef<Quote[]>([]);
 
   const combine = useCallback(() => {
@@ -87,6 +94,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     const brs = latestBrs.current;
     const genders = latestGenders.current;
     const notes = latestOlfactoryNotes.current;
+    const savedSizes = latestSizes.current;
     const savedQuotes = latestQuotes.current;
 
     const withRelations = prods.map((p) => ({
@@ -104,6 +112,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     setOlfactoryNotes(
       [...notes].sort((a, b) => a.nombre.localeCompare(b.nombre)),
     );
+    setSizes([...savedSizes].sort((a, b) => a.orden - b.orden));
     setQuotes(
       [...savedQuotes].sort(
         (a, b) =>
@@ -121,17 +130,19 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     let unsubBrands = () => {};
     let unsubGenders = () => {};
     let unsubOlfactoryNotes = () => {};
+    let unsubSizes = () => {};
     let unsubQuotes = () => {};
 
     const setup = async () => {
       try {
-        const [lp, lc, ls, lb, lg, lo, lq] = await Promise.all([
+        const [lp, lc, ls, lb, lg, lo, lz, lq] = await Promise.all([
           getProducts(),
           getCategories(),
           getSubcategories(),
           getBrands(),
           getGenders(),
           getOlfactoryNotes(),
+          getSizes(),
           getQuotes(),
         ]);
         if (!active) return;
@@ -141,6 +152,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
         latestBrs.current = lb;
         latestGenders.current = lg;
         latestOlfactoryNotes.current = lo;
+        latestSizes.current = lz;
         latestQuotes.current = lq;
         combine();
         if (lp.length > 0 || !navigator.onLine) setLoading(false);
@@ -237,6 +249,19 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
           handleError,
         );
 
+        unsubSizes = onSnapshot(
+          collection(firestore, "sizes"),
+          (snap) => {
+            const data = snap.docs.map(
+              (d) => ({ id: d.id, ...d.data() }) as Size,
+            );
+            latestSizes.current = data;
+            void saveSizes(data);
+            combine();
+          },
+          handleError,
+        );
+
         unsubQuotes = onSnapshot(
           collection(firestore, "quotes"),
           (snap) => {
@@ -270,6 +295,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
       unsubBrands();
       unsubGenders();
       unsubOlfactoryNotes();
+      unsubSizes();
       unsubQuotes();
     };
   }, [combine]);
@@ -350,6 +376,17 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     [combine],
   );
 
+  const removeSize = useCallback(
+    (id: string) => {
+      latestSizes.current = latestSizes.current.filter(
+        (size) => size.id !== id,
+      );
+      void saveSizes(latestSizes.current);
+      combine();
+    },
+    [combine],
+  );
+
   return createElement(
     CatalogDataContext.Provider,
     {
@@ -360,6 +397,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
         brands,
         genders,
         olfactoryNotes,
+        sizes,
         quotes,
         loading,
         markDeleted,
@@ -368,6 +406,7 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
         removeBrand,
         removeGender,
         removeOlfactoryNote,
+        removeSize,
       },
     },
     children,

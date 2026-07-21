@@ -90,6 +90,13 @@ export interface Gender {
   activo: boolean;
 }
 
+export interface Size {
+  id: string;
+  nombre: string;
+  orden: number;
+  activo: boolean;
+}
+
 export type OlfactoryCategory =
   | "acordes"
   | "notasSalida"
@@ -141,6 +148,7 @@ export interface Product {
   estado: ProductStatus;
   etiquetas: string[];
   variantes?: ProductVariant[];
+  tallas?: string[];
   acordes?: ProductAccord[];
   notasSalida?: string[];
   notasCorazon?: string[];
@@ -169,6 +177,7 @@ export interface QuoteProduct {
   cantidad: number;
   precio: number;
   subtotal: number;
+  talla?: string;
 }
 
 export type QuoteStatus =
@@ -277,11 +286,13 @@ export interface Invitation {
 }
 
 export interface CartItem {
+  id?: string;
   productoId: string;
   nombre: string;
   imagen: string;
   precio: number;
   cantidad: number;
+  talla?: string;
 }
 
 export interface ActivityLog {

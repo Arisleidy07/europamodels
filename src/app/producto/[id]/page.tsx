@@ -12,10 +12,9 @@ import {
   ProductImageGallery,
   type GalleryImage,
 } from "@/components/ProductImageGallery";
-import { formatCurrency, cn, shareContent, downloadFile } from "@/lib/utils";
+import { formatCurrency, cn, shareContent } from "@/lib/utils";
 import {
   Share2,
-  Download,
   Plus,
   Check,
   ChevronLeft,
@@ -48,7 +47,7 @@ function intensityColorFn(v: number): string {
 export default function PublicProductPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const { products, olfactoryNotes, loading } = useCatalogData();
+  const { products, olfactoryNotes, sizes, loading } = useCatalogData();
   const { settings } = useSettings();
   const { addToCart, openCartDrawer } = useCart();
   const { user, hasPermission } = useAuth();
@@ -62,6 +61,7 @@ export default function PublicProductPage() {
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
     null,
   );
+  const [selectedTalla, setSelectedTalla] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -75,6 +75,7 @@ export default function PublicProductPage() {
     setProduct(found);
     setCurrentImage(0);
     setSelectedVariant(null);
+    setSelectedTalla(null);
     setAdded(false);
   }, [id, products]);
 
@@ -144,7 +145,20 @@ export default function PublicProductPage() {
   const prev = () =>
     setCurrentImage((i) => (i - 1 + images.length) % images.length);
 
+  const productTallas = useMemo(
+    () => new Set(product.tallas || []),
+    [product.tallas],
+  );
+
   const handleAdd = () => {
+    const hasTallas = sizes.some((s) => productTallas.has(s.id));
+    if (hasTallas && !selectedTalla) {
+      toast.error("Selecciona una talla");
+      return;
+    }
+    const tallaName = selectedTalla
+      ? sizes.find((s) => s.id === selectedTalla)?.nombre
+      : undefined;
     addToCart({
       productoId: product.id,
       nombre:
@@ -153,6 +167,7 @@ export default function PublicProductPage() {
       imagen: images[0],
       precio: displayPrice,
       cantidad: 1,
+      talla: tallaName,
     });
     setAdded(true);
     toast.success("Agregado al carrito");
@@ -169,14 +184,6 @@ export default function PublicProductPage() {
       () => toast.success("Enlace copiado"),
     );
     if (!ok) toast.error("No se pudo compartir");
-  };
-
-  const handleDownloadImage = async () => {
-    const url = images[currentImage];
-    if (!url) return;
-    const name = `${product.nombre.replace(/[^a-z0-9]/gi, "_")}_${currentImage + 1}.jpg`;
-    await downloadFile(url, name);
-    toast.success("Descargando imagen");
   };
 
   const getNotesForIds = (ids: string[] | undefined) =>
@@ -391,6 +398,47 @@ export default function PublicProductPage() {
               </div>
             )}
 
+            {/* Sizes */}
+            {sizes.length > 0 && (
+              <div className="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
+                <p className="mb-3 text-sm font-semibold text-foreground">
+                  Talla
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((size) => {
+                    const available = productTallas.has(size.id);
+                    const selected = selectedTalla === size.id;
+                    return (
+                      <button
+                        key={size.id}
+                        type="button"
+                        disabled={!available}
+                        onClick={() =>
+                          setSelectedTalla(selected ? null : size.id)
+                        }
+                        className={cn(
+                          "rounded-xl border px-4 py-2 text-sm font-medium transition-all",
+                          selected
+                            ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
+                            : available
+                              ? "border-border bg-white text-foreground hover:border-primary/40"
+                              : "border-border bg-muted/40 text-muted-foreground cursor-not-allowed",
+                        )}
+                      >
+                        {size.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+                {selectedTalla && (
+                  <p className="mt-2 text-xs text-primary">
+                    Talla seleccionada:{" "}
+                    {sizes.find((s) => s.id === selectedTalla)?.nombre}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* CTA — Add to cart + Share (single share button here only) */}
             <div className="flex gap-2.5">
               <Button
@@ -422,15 +470,6 @@ export default function PublicProductPage() {
                 title="Compartir"
               >
                 <Share2 className="h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={handleDownloadImage}
-                className="shrink-0 px-4"
-                title="Descargar imagen"
-              >
-                <Download className="h-5 w-5" />
               </Button>
             </div>
 

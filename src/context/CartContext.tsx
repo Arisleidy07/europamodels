@@ -35,33 +35,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (loaded) saveCart(items);
   }, [items, loaded]);
 
+  const getCartId = (item: CartItem) =>
+    item.id ||
+    (item.talla ? `${item.productoId}-${item.talla}` : item.productoId);
+
   const addToCart = (item: CartItem) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.productoId === item.productoId);
+      const id = getCartId(item);
+      const existing = prev.find((i) => i.id === id);
       if (existing) {
         return prev.map((i) =>
-          i.productoId === item.productoId
-            ? { ...i, cantidad: i.cantidad + 1 }
-            : i,
+          i.id === id ? { ...i, cantidad: i.cantidad + 1 } : i,
         );
       }
-      return [...prev, { ...item, cantidad: 1 }];
+      return [...prev, { ...item, id, cantidad: 1 }];
     });
   };
 
-  const removeFromCart = (productoId: string) => {
-    setItems((prev) => prev.filter((i) => i.productoId !== productoId));
+  const removeFromCart = (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const updateQuantity = (productoId: string, quantity: number) => {
+  const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productoId);
+      removeFromCart(id);
       return;
     }
     setItems((prev) =>
-      prev.map((i) =>
-        i.productoId === productoId ? { ...i, cantidad: quantity } : i,
-      ),
+      prev.map((i) => (i.id === id ? { ...i, cantidad: quantity } : i)),
     );
   };
 

@@ -15,12 +15,15 @@ import {
   X,
   Upload,
   Trash2,
+  ArrowUp,
+  ArrowDown,
   Star,
   Download,
   Edit3,
   ImageIcon,
 } from "lucide-react";
 import { cn, downloadFile } from "@/lib/utils";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 
 export interface GalleryImage {
   id: string;
@@ -64,7 +67,7 @@ export function ProductImageGallery({
   productName = "producto",
   aspectRatio = "1 / 1",
   className,
-  showDownload = true,
+  showDownload = false,
 }: ProductImageGalleryProps) {
   const [current, setCurrent] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -74,6 +77,8 @@ export function ProductImageGallery({
   const fileRef = useRef<HTMLInputElement>(null);
   const replaceRef = useRef<HTMLInputElement>(null);
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteName, setDeleteName] = useState("");
 
   useEffect(() => {
     onCurrentImageChange?.(current);
@@ -196,10 +201,218 @@ export function ProductImageGallery({
     setRenamingId(null);
   };
 
+  const moveImage = (id: string, direction: -1 | 1) => {
+    const index = images.findIndex((i) => i.id === id);
+    if (index < 0) return;
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= images.length) return;
+    const next = [...images];
+    [next[index], next[newIndex]] = [next[newIndex], next[index]];
+    handleReorder(next);
+  };
+
+  const askDelete = (id: string) => {
+    const index = images.findIndex((i) => i.id === id);
+    if (index < 0) return;
+    setDeleteId(id);
+    setDeleteName(getFileName(images[index], index, productName));
+  };
+
+  const executeDelete = () => {
+    if (deleteId) removeImage(deleteId);
+    setDeleteId(null);
+    setDeleteName("");
+  };
+
   const currentImage = images[current];
   const currentName = currentImage
     ? getFileName(currentImage, current, productName)
     : "";
+
+  if (editable) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        {/* Compact cover preview */}
+        {currentImage ? (
+          <div
+            className="group relative mx-auto max-w-md overflow-hidden rounded-2xl border border-border bg-white p-3 shadow-sm"
+            style={{ maxHeight: "260px" }}
+          >
+            <div className="flex h-full items-center justify-center">
+              <img
+                src={currentImage.url}
+                alt={productName}
+                className="max-h-[220px] w-auto object-contain"
+              />
+            </div>
+            <div className="absolute right-3 top-3 rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-medium text-white">
+              {current + 1} / {images.length}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Add images button */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-white px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition-all hover:bg-gray-50"
+          >
+            <Upload className="h-4 w-4" /> Agregar imágenes
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              addFiles(e.target.files);
+              e.currentTarget.value = "";
+            }}
+          />
+        </div>
+
+        {/* Image management grid */}
+        {images.length > 0 && (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+            {images.map((img, idx) => (
+              <div
+                key={img.id}
+                className="group relative rounded-xl border border-border bg-white p-2 shadow-sm transition-all hover:shadow-md"
+              >
+                <button
+                  type="button"
+                  onClick={() => setCurrent(idx)}
+                  className="relative block h-28 w-full overflow-hidden rounded-lg bg-gray-50"
+                >
+                  <img
+                    src={img.url}
+                    alt=""
+                    className="h-full w-full object-contain p-1"
+                  />
+                  {idx === 0 && (
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-bold text-white">
+                      PORTADA
+                    </span>
+                  )}
+                </button>
+
+                <p className="mt-2 truncate px-1 text-xs font-medium text-foreground">
+                  {getFileName(img, idx, productName)}
+                </p>
+
+                {/* Controls */}
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setMain(idx)}
+                    disabled={idx === 0}
+                    className="rounded-lg p-1.5 text-amber-500 transition-colors hover:bg-amber-50 disabled:opacity-40"
+                    title={idx === 0 ? "Portada actual" : "Establecer portada"}
+                  >
+                    <Star className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRenamingId(img.id)}
+                    className="rounded-lg p-1.5 text-foreground transition-colors hover:bg-muted"
+                    title="Renombrar"
+                  >
+                    <Edit3 className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReplaceTargetId(img.id);
+                      replaceRef.current?.click();
+                    }}
+                    className="rounded-lg p-1.5 text-foreground transition-colors hover:bg-muted"
+                    title="Reemplazar"
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadFile(img.url, getFileName(img, idx, productName))
+                    }
+                    className="rounded-lg p-1.5 text-foreground transition-colors hover:bg-muted"
+                    title="Descargar"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveImage(img.id, -1)}
+                    disabled={idx === 0}
+                    className="rounded-lg p-1.5 text-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                    title="Mover arriba"
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveImage(img.id, 1)}
+                    disabled={idx === images.length - 1}
+                    className="rounded-lg p-1.5 text-foreground transition-colors hover:bg-muted disabled:opacity-40"
+                    title="Mover abajo"
+                  >
+                    <ArrowDown className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => askDelete(img.id)}
+                    className="rounded-lg p-1.5 text-red-500 transition-colors hover:bg-red-50"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          ref={replaceRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file && replaceTargetId) {
+              replaceImage(replaceTargetId, file);
+            }
+            e.currentTarget.value = "";
+            setReplaceTargetId(null);
+          }}
+        />
+
+        {/* Rename modal */}
+        {renamingId && (
+          <RenameModal
+            initial={(() => {
+              const idx = images.findIndex((i) => i.id === renamingId);
+              const img = images[idx];
+              return img ? getFileName(img, idx, productName) : "";
+            })()}
+            onSave={(name) => updateName(renamingId, name)}
+            onCancel={() => setRenamingId(null)}
+          />
+        )}
+
+        <ConfirmModal
+          open={!!deleteId}
+          title="¿Eliminar imagen?"
+          message={`¿Estás seguro de que deseas eliminar "${deleteName}"? Esta acción no se puede deshacer.`}
+          confirmLabel="Eliminar"
+          onConfirm={executeDelete}
+          onCancel={() => setDeleteId(null)}
+        />
+      </div>
+    );
+  }
 
   if (images.length === 0 && !editable) {
     return (

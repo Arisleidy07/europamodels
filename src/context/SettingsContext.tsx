@@ -136,14 +136,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     const primary = hexToHsl(settings.apariencia.colorPrincipal);
-    const background = hexToHsl(settings.apariencia.colorSecundario);
     if (primary) root.style.setProperty("--primary", primary);
-    if (settings.apariencia.modoOscuro) {
-      root.style.removeProperty("--background");
-    } else if (background) {
-      root.style.setProperty("--background", background);
-    }
-    root.classList.toggle("dark", settings.apariencia.modoOscuro);
   }, [settings.apariencia]);
 
   const suspended = settings.licenseStatus === "suspended";

@@ -110,18 +110,36 @@ export default function AdminSettings() {
   const handleRemoveVideo = async (index: number) => {
     const currentVideos = form.inicio.videos || [];
     const url = currentVideos[index];
+    if (!url) return;
+
     const storage = getFirebaseStorage();
     if (storage && url.includes("firebasestorage.googleapis.com")) {
       try {
-        const storageRef = ref(storage, url);
-        await deleteObject(storageRef);
+        const parsed = new URL(url);
+        const pathMatch = parsed.pathname.match(/\/o\/(.+)$/);
+        if (pathMatch) {
+          const filePath = decodeURIComponent(pathMatch[1]);
+          const fileRef = ref(storage, filePath);
+          await deleteObject(fileRef);
+        }
       } catch {
-        // File may already be deleted
+        // File may already be deleted or URL is invalid
       }
     }
+
     const updated = currentVideos.filter((_: string, i: number) => i !== index);
-    handleChange("inicio.videos", updated);
-    toast.success("Video eliminado");
+    const nextForm = { ...form, inicio: { ...form.inicio, videos: updated } };
+    setForm(nextForm);
+
+    setSaving(true);
+    try {
+      await updateSettings(nextForm);
+      toast.success("Video eliminado");
+    } catch (err: any) {
+      toast.error(err.message || "Error al guardar");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const Toggle = ({
@@ -361,23 +379,6 @@ export default function AdminSettings() {
               aria-label="Color principal"
             />
           </label>
-          <label className="flex items-center justify-between rounded-xl border border-border bg-muted/30 px-4 py-3">
-            <span className="text-sm font-medium">Color secundario</span>
-            <input
-              type="color"
-              value={form.apariencia.colorSecundario}
-              onChange={(e) =>
-                handleChange("apariencia.colorSecundario", e.target.value)
-              }
-              className="h-8 w-10 cursor-pointer rounded border-0 bg-transparent p-0"
-              aria-label="Color secundario"
-            />
-          </label>
-          <Toggle
-            label="Modo oscuro"
-            checked={form.apariencia.modoOscuro}
-            onChange={(value) => handleChange("apariencia.modoOscuro", value)}
-          />
         </div>
       </section>
 

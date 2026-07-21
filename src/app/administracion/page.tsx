@@ -18,6 +18,7 @@ import {
   Copy,
   FileText,
   Droplets,
+  Ruler,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/Button";
@@ -31,6 +32,7 @@ import AdminSettings from "@/components/admin/AdminSettings";
 import AdminQuotes from "@/components/admin/AdminQuotes";
 import AdminOlfactory from "@/components/admin/AdminOlfactory";
 import AdminGenders from "@/components/admin/AdminGenders";
+import AdminSizes from "@/components/admin/AdminSizes";
 import AdminSubcategories from "@/components/admin/AdminSubcategories";
 import { useAuth } from "@/context/AuthContext";
 import { useCatalogData } from "@/hooks/useCatalogData";
@@ -89,6 +91,13 @@ export default function AdminPage() {
         hasPermission("categorias", "crear") ||
         hasPermission("categorias", "editar") ||
         hasPermission("categorias", "eliminar"),
+    },
+    {
+      id: "tallas",
+      label: "Tallas",
+      icon: Ruler,
+      visible:
+        user?.rol === "administrador" || hasPermission("productos", "crear"),
     },
     {
       id: "biblioteca",
@@ -440,6 +449,7 @@ export default function AdminPage() {
           {activeTab === "generos" && <AdminGenders />}
           {activeTab === "subcategorias" && <AdminSubcategories />}
           {activeTab === "biblioteca" && <AdminOlfactory />}
+          {activeTab === "tallas" && <AdminSizes />}
           {activeTab === "cotizaciones" && <AdminQuotes />}
           {activeTab === "equipo" && <AdminTeam />}
           {activeTab === "configuracion" && <AdminSettings />}

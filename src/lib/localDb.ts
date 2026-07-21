@@ -5,6 +5,7 @@ import type {
   Subcategory,
   Brand,
   Gender,
+  Size,
   Quote,
   AppSettings,
   CartItem,
@@ -38,6 +39,10 @@ interface EuropaDB extends DBSchema {
     key: string;
     value: OlfactoryNote;
   };
+  sizes: {
+    key: string;
+    value: Size;
+  };
   quotes: {
     key: string;
     value: Quote;
@@ -57,14 +62,14 @@ interface EuropaDB extends DBSchema {
 }
 
 const DB_NAME = "europa-models-db";
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 let dbPromise: Promise<IDBPDatabase<EuropaDB>> | null = null;
 
 export function getDB() {
   if (!dbPromise) {
     dbPromise = openDB<EuropaDB>(DB_NAME, DB_VERSION, {
-      upgrade(db, _oldVersion, _newVersion, transaction) {
+      async upgrade(db, _oldVersion, _newVersion, transaction) {
         const productsStore = db.objectStoreNames.contains("products")
           ? transaction.objectStore("products")
           : db.createObjectStore("products", { keyPath: "id" });
@@ -94,14 +99,25 @@ export function getDB() {
         if (!db.objectStoreNames.contains("olfactoryNotes")) {
           db.createObjectStore("olfactoryNotes", { keyPath: "id" });
         }
+        if (!db.objectStoreNames.contains("sizes")) {
+          db.createObjectStore("sizes", { keyPath: "id" });
+        }
         if (!db.objectStoreNames.contains("quotes")) {
           db.createObjectStore("quotes", { keyPath: "id" });
         }
         if (!db.objectStoreNames.contains("settings")) {
           db.createObjectStore("settings", { keyPath: "id" });
         }
-        if (!db.objectStoreNames.contains("cart")) {
-          db.createObjectStore("cart", { keyPath: "productoId" });
+        if (db.objectStoreNames.contains("cart")) {
+          const oldStore = transaction.objectStore("cart");
+          const oldItems = (await oldStore.getAll()) as CartItem[];
+          db.deleteObjectStore("cart");
+          const newStore = db.createObjectStore("cart", { keyPath: "id" });
+          for (const item of oldItems) {
+            newStore.put({ ...item, id: item.id || item.productoId });
+          }
+        } else {
+          db.createObjectStore("cart", { keyPath: "id" });
         }
         if (!db.objectStoreNames.contains("syncQueue")) {
           db.createObjectStore("syncQueue", { keyPath: "id" });
@@ -182,6 +198,18 @@ export async function saveOlfactoryNotes(notes: OlfactoryNote[]) {
 export async function getOlfactoryNotes(): Promise<OlfactoryNote[]> {
   const db = await getDB();
   return db.getAll("olfactoryNotes");
+}
+
+export async function saveSizes(sizes: Size[]) {
+  const db = await getDB();
+  const tx = db.transaction("sizes", "readwrite");
+  await tx.store.clear();
+  await Promise.all([...sizes.map((s) => tx.store.put(s)), tx.done]);
+}
+
+export async function getSizes(): Promise<Size[]> {
+  const db = await getDB();
+  return db.getAll("sizes");
 }
 
 export async function saveSettings(settings: AppSettings) {

@@ -46,6 +46,7 @@ export async function createQuote(
       cantidad: item.cantidad,
       precio: item.precio,
       subtotal: item.precio * item.cantidad,
+      talla: item.talla,
     })),
     subtotal,
     total,

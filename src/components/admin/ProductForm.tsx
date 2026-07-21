@@ -1291,6 +1291,7 @@ const initialProduct: Partial<Product> = {
   estado: "publicado",
   etiquetas: [],
   variantes: [],
+  tallas: [],
   acordes: [],
   notasSalida: [],
   notasCorazon: [],
@@ -1376,6 +1377,7 @@ export function ProductForm({
     removeBrand,
     removeGender,
     olfactoryNotes: cachedOlfactoryNotes,
+    sizes,
   } = useCatalogData();
   const [showDraftsPanel, setShowDraftsPanel] = useState(false);
   const [drafts, setDrafts] = useState<DraftEntry[]>(() => getDrafts());
@@ -1628,8 +1630,9 @@ export function ProductForm({
     { id: "info", label: "Información", icon: "📝" },
     { id: "clasificacion", label: "Clasificación", icon: "🏷️" },
     { id: "precio", label: "Precio e inventario", icon: "💰" },
-    { id: "imagenes", label: "Imágenes", icon: "🖼️" },
+    { id: "imagenes", label: "Galería de imágenes", icon: "🖼️" },
     { id: "info-image", label: "Img. informativa", icon: "📋" },
+    { id: "tallas", label: "Tallas", icon: "📏" },
     { id: "variantes", label: "Variantes", icon: "🔀" },
     { id: "olfactoria", label: "Biblioteca olfativa", icon: "🌿" },
     { id: "estado", label: "Estado y etiquetas", icon: "⚙️" },
@@ -1914,6 +1917,50 @@ export function ProductForm({
                     </button>
                   </div>
                 </div>
+              </div>
+            </section>
+
+            {/* ── Tallas ── */}
+            <section id="section-tallas" className="px-6 py-7">
+              <SectionHeader
+                label="Tallas disponibles"
+                icon="📏"
+                description="Selecciona las tallas que aplican a este producto."
+              />
+              <div className="mt-4">
+                {sizes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No hay tallas registradas. Ve a la pestaña "Tallas" para
+                    crearlas.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {sizes.map((size) => {
+                      const selected = (form.tallas || []).includes(size.id);
+                      return (
+                        <button
+                          key={size.id}
+                          type="button"
+                          onClick={() => {
+                            const current = form.tallas || [];
+                            const next = selected
+                              ? current.filter((id) => id !== size.id)
+                              : [...current, size.id];
+                            setForm({ ...form, tallas: next });
+                          }}
+                          className={cn(
+                            "rounded-xl border px-4 py-2 text-sm font-medium transition-all",
+                            selected
+                              ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
+                              : "border-border bg-white text-foreground hover:border-primary/40",
+                          )}
+                        >
+                          {size.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </section>
 

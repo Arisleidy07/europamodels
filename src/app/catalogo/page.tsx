@@ -25,8 +25,6 @@ import { LicenseGuard } from "@/components/LicenseGuard";
 import type { ProductWithRelations, Gender } from "@/types";
 import toast from "react-hot-toast";
 
-const PAGE_SIZE = 24;
-
 function CategorySidebar({
   open,
   onClose,
@@ -309,6 +307,7 @@ export default function CatalogoPage() {
   const [catSidebarOpen, setCatSidebarOpen] = useState(false);
   const [filterSidebarOpen, setFilterSidebarOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const pageSize = settings.catalogo.productosPorPagina || 24;
 
   useEffect(() => {
     setPage(1);
@@ -375,8 +374,8 @@ export default function CatalogoPage() {
   ]);
 
   const pagedProducts = useMemo(
-    () => filteredProducts.slice(0, page * PAGE_SIZE),
-    [filteredProducts, page],
+    () => filteredProducts.slice(0, page * pageSize),
+    [filteredProducts, page, pageSize],
   );
 
   const hasMore = pagedProducts.length < filteredProducts.length;

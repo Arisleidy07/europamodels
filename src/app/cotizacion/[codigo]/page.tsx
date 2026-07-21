@@ -141,6 +141,11 @@ export default function QuotePage() {
                     </h3>
                     <p className="text-xs text-muted-foreground">
                       {formatCurrency(p.precio)} × {p.cantidad}
+                      {p.talla && (
+                        <span className="ml-1.5 font-medium text-primary">
+                          Talla: {p.talla}
+                        </span>
+                      )}
                     </p>
                   </div>
                   <p className="text-sm font-bold text-foreground">
