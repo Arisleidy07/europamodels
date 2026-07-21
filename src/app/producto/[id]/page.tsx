@@ -99,6 +99,11 @@ export default function PublicProductPage() {
     [product?.id, product?.imagenes],
   );
 
+  const productTallas = useMemo(
+    () => new Set(product?.tallas || []),
+    [product?.tallas],
+  );
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-white">
@@ -144,11 +149,6 @@ export default function PublicProductPage() {
   const next = () => setCurrentImage((i) => (i + 1) % images.length);
   const prev = () =>
     setCurrentImage((i) => (i - 1 + images.length) % images.length);
-
-  const productTallas = useMemo(
-    () => new Set(product.tallas || []),
-    [product.tallas],
-  );
 
   const handleAdd = () => {
     const hasTallas = sizes.some((s) => productTallas.has(s.id));
