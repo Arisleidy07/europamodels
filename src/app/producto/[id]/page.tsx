@@ -150,8 +150,10 @@ export default function PublicProductPage() {
   const prev = () =>
     setCurrentImage((i) => (i - 1 + images.length) % images.length);
 
+  const productSizes = sizes.filter((s) => productTallas.has(s.id));
+
   const handleAdd = () => {
-    const hasTallas = sizes.some((s) => productTallas.has(s.id));
+    const hasTallas = productSizes.length > 0;
     if (hasTallas && !selectedTalla) {
       toast.error("Selecciona una talla");
       return;
@@ -399,20 +401,18 @@ export default function PublicProductPage() {
             )}
 
             {/* Sizes */}
-            {sizes.length > 0 && (
+            {productSizes.length > 0 && (
               <div className="rounded-2xl border border-border bg-white p-4 shadow-sm sm:p-5">
                 <p className="mb-3 text-sm font-semibold text-foreground">
                   Talla
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {sizes.map((size) => {
-                    const available = productTallas.has(size.id);
+                  {productSizes.map((size) => {
                     const selected = selectedTalla === size.id;
                     return (
                       <button
                         key={size.id}
                         type="button"
-                        disabled={!available}
                         onClick={() =>
                           setSelectedTalla(selected ? null : size.id)
                         }
@@ -420,9 +420,7 @@ export default function PublicProductPage() {
                           "rounded-xl border px-4 py-2 text-sm font-medium transition-all",
                           selected
                             ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/20"
-                            : available
-                              ? "border-border bg-white text-foreground hover:border-primary/40"
-                              : "border-border bg-muted/40 text-muted-foreground cursor-not-allowed",
+                            : "border-border bg-white text-foreground hover:border-primary/40",
                         )}
                       >
                         {size.nombre}
@@ -431,9 +429,8 @@ export default function PublicProductPage() {
                   })}
                 </div>
                 {selectedTalla && (
-                  <p className="mt-2 text-xs text-primary">
-                    Talla seleccionada:{" "}
-                    {sizes.find((s) => s.id === selectedTalla)?.nombre}
+                  <p className="mt-2 text-xs font-semibold text-primary">
+                    Talla {sizes.find((s) => s.id === selectedTalla)?.nombre}
                   </p>
                 )}
               </div>
